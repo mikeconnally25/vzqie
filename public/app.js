@@ -12,7 +12,6 @@ const els = {
   entries: document.getElementById("entries-list"),
   eligible: document.getElementById("eligible-list"),
   winners: document.getElementById("winners-list"),
-  audit: document.getElementById("audit-list"),
   toast: document.getElementById("toast"),
 };
 
@@ -102,20 +101,6 @@ function renderState(state) {
       </article>
     `,
     "No winners yet"
-  );
-
-  renderList(
-    els.audit,
-    [...state.auditLog].reverse().slice(0, 20),
-    (entry) => `
-      <article class="row">
-        <div class="row-main">
-          <div class="row-title">${entry.action}</div>
-          <div class="row-meta">${entry.username}</div>
-        </div>
-      </article>
-    `,
-    "No events yet"
   );
 }
 

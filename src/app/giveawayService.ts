@@ -1,8 +1,7 @@
-import { InMemoryAuditLogger } from "../audit.js";
 import { KickChatProvider } from "../kick/KickChatProvider.js";
 import { GiveawayEngine } from "../giveawayEngine.js";
 import type { EntryResult } from "../giveawayEngine.js";
-import type { AuditLogEntry, ChatMessage, Participant, WinRecord } from "../types.js";
+import type { ChatMessage, Participant, WinRecord } from "../types.js";
 
 export interface GiveawayServiceConfig {
   channel: string;
@@ -26,7 +25,6 @@ export interface DashboardState {
   entryKeyword: string;
   eligible: Participant[];
   recentEntries: EntryLogItem[];
-  auditLog: AuditLogEntry[];
   winners: Array<{ username: string; timestamp: number }>;
 }
 
@@ -40,7 +38,6 @@ export type GiveawayEvent =
     };
 
 export class GiveawayService {
-  private readonly auditLogger = new InMemoryAuditLogger();
   private readonly engine: GiveawayEngine;
   private readonly chat: KickChatProvider;
   private readonly entryKeyword: string;
@@ -52,7 +49,7 @@ export class GiveawayService {
   constructor(private readonly config: GiveawayServiceConfig) {
     this.entryKeyword = (config.entryKeyword ?? "!enter").toLowerCase();
 
-    this.engine = new GiveawayEngine({ auditLogger: this.auditLogger });
+    this.engine = new GiveawayEngine();
 
     this.chat = new KickChatProvider({
       channel: config.channel,
@@ -121,7 +118,6 @@ export class GiveawayService {
       entryKeyword: this.entryKeyword,
       eligible: this.engine.getEligibleParticipants(),
       recentEntries: [...this.recentEntries],
-      auditLog: [...this.auditLogger.entries],
       winners: this.previousWins.map((win) => ({
         username: win.username,
         timestamp: win.timestamp,

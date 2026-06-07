@@ -1,4 +1,3 @@
-import { InMemoryAuditLogger } from "./src/audit.js";
 import { calculateRisk } from "./src/risk.js";
 import { GiveawayEngine } from "./src/giveawayEngine.js";
 import type { ChatMessage, UserProfile } from "./src/types.js";
@@ -41,8 +40,7 @@ function line(text: string): void {
 async function main(): Promise<void> {
   header("🎁 KICK GIVEAWAY — LIVE DEMO");
 
-  const auditLogger = new InMemoryAuditLogger();
-  const engine = new GiveawayEngine({ now: () => now, auditLogger });
+  const engine = new GiveawayEngine({ now: () => now });
 
   header("💬 Chat messages incoming");
 
@@ -91,14 +89,6 @@ async function main(): Promise<void> {
   const winners = engine.draw(1, previousWins);
   line(`🏆 Winner: ${winners[0]?.username ?? "none"}`);
   console.log();
-
-  header("📜 Audit log");
-  for (const entry of auditLogger.entries) {
-    const meta = entry.metadata
-      ? ` ${JSON.stringify(entry.metadata)}`
-      : "";
-    line(`${entry.action.padEnd(16)} → ${entry.username}${meta}`);
-  }
 
   console.log(`\n${"═".repeat(52)}`);
   console.log("  Demo complete — run `npm run demo` anytime");
