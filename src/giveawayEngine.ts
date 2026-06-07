@@ -174,9 +174,9 @@ export class GiveawayEngine {
       return false;
     }
 
-    entry.approved = false;
     this.rejected.add(normalized);
     this.participants.delete(normalized);
+    this.approvalQueue.delete(normalized);
 
     void this.auditLogger?.log({
       action: "ENTRY_REJECTED",

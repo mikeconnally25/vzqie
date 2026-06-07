@@ -5,14 +5,18 @@
   "scripts": {
     "build": "tsc",
     "bot": "node --env-file=.env --import tsx bot.ts",
+    "web": "node --env-file=.env --import tsx server.ts",
     "demo": "node --import tsx demo.ts",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "kick-wss": "^1.0.5",
+    "socket.io": "^4.8.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^22.15.0",
     "@types/ws": "^8.18.0",
     "tsx": "^4.19.0",

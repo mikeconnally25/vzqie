@@ -1,3 +1,10 @@
+export { GiveawayService, loadGiveawayConfig } from "./app/giveawayService.js";
+export type {
+  DashboardState,
+  EntryLogItem,
+  GiveawayEvent,
+  GiveawayServiceConfig,
+} from "./app/giveawayService.js";
 export { AUDIT_LOG_SCHEMA, InMemoryAuditLogger } from "./audit.js";
 export { allowed } from "./blacklist.js";
 export { canWin, getLastWin } from "./canWin.js";

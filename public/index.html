@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kick Giveaway Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">🎁</div>
+          <div>
+            <h1>Kick Giveaway</h1>
+            <p class="subtitle">
+              Channel <span id="channel-name">—</span>
+              · Keyword <span id="entry-keyword">!enter</span>
+            </p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div id="connection-pill" class="pill pill-offline">Offline</div>
+          <button id="draw-btn" class="btn btn-primary">Draw Winner</button>
+        </div>
+      </header>
+
+      <section class="stats">
+        <article class="stat-card">
+          <span class="stat-label">Eligible</span>
+          <strong id="stat-eligible" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Pending approval</span>
+          <strong id="stat-pending" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Recent entries</span>
+          <strong id="stat-entries" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Winners</span>
+          <strong id="stat-winners" class="stat-value">0</strong>
+        </article>
+      </section>
+
+      <main class="grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Live entries</h2>
+            <span class="panel-hint">Chat messages matching keyword</span>
+          </div>
+          <div id="entries-list" class="list empty-state">
+            Waiting for chat entries…
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Approval queue</h2>
+            <span class="panel-hint">High-risk viewers need your OK</span>
+          </div>
+          <div id="queue-list" class="list empty-state">No pending approvals</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Draw pool</h2>
+            <span class="panel-hint">Eligible participants right now</span>
+          </div>
+          <div id="eligible-list" class="list empty-state">No eligible viewers yet</div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Winners &amp; audit</h2>
+            <div class="draw-controls">
+              <label>
+                Count
+                <input id="draw-count" type="number" min="1" max="10" value="1" />
+              </label>
+            </div>
+          </div>
+          <div class="split">
+            <div>
+              <h3 class="subheading">Winners</h3>
+              <div id="winners-list" class="list compact empty-state">No winners yet</div>
+            </div>
+            <div>
+              <h3 class="subheading">Audit log</h3>
+              <div id="audit-list" class="list compact empty-state">No events yet</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

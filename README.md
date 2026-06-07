@@ -62,9 +62,20 @@ Look for `chatroom.id` in the JSON and set `KICK_CHATROOM_ID` in `.env`. This sk
 
 `kick-wss` is **read-only**. To announce winners in chat you need Kick OAuth with the `chat:write` scope via the [Kick Developer Portal](https://kick.com/settings/developer). That is a separate integration on top of this engine.
 
+## Web dashboard
+
+Run the giveaway as a website with live updates:
+
+```bash
+npm run web
+```
+
+Open [http://localhost:3000](http://localhost:3000) to approve entries, view the draw pool, and pick winners in the browser.
+
 ## Scripts
 
-- `npm run bot` — connect to live Kick chat
+- `npm run web` — web dashboard at `http://localhost:3000`
+- `npm run bot` — terminal-only giveaway bot
 - `npm run demo` — offline simulated giveaway
 - `npm run build` — compile TypeScript to `dist/`
 - `npm test` — run unit tests
@@ -73,5 +84,7 @@ Look for `chatroom.id` in the JSON and set `KICK_CHATROOM_ID` in `.env`. This sk
 
 - `src/` — chat ingest, risk scoring, eligibility, and draw logic
 - `src/kick/` — Kick WebSocket adapter
-- `bot.ts` — live chat runner
+- `server.ts` — web dashboard server
+- `public/` — dashboard UI
+- `bot.ts` — terminal chat runner
 - `tests/` — unit tests for cooldown, eligibility, and approval flows
