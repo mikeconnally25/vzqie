@@ -5,6 +5,13 @@ import {
   validateUsername,
   verifyPassword,
 } from "./password.js";
+import {
+  kickAccountsMatch,
+  lookupKickChannel,
+  normalizeKickSlug,
+  validateChatroomId,
+  validateKickSlug,
+} from "../kick/kickChannelLookup.js";
 import { UserStore } from "./userStore.js";
 import type { LoginInput, PublicUser, SignupInput } from "./types.js";
 import { toPublicUser } from "./types.js";
@@ -28,8 +35,41 @@ export class AuthService {
       throw new Error(emailError);
     }
 
+    const kickSlugError = validateKickSlug(input.kickUsername);
+    if (kickSlugError) {
+      throw new Error(kickSlugError);
+    }
+
+    const chatroomError = validateChatroomId(input.kickChatroomId);
+    if (chatroomError) {
+      throw new Error(chatroomError);
+    }
+
+    let resolvedKick;
+    try {
+      resolvedKick = await lookupKickChannel(input.kickUsername);
+    } catch {
+      resolvedKick = undefined;
+    }
+
+    if (
+      resolvedKick &&
+      !kickAccountsMatch(input.kickUsername, input.kickChatroomId, resolvedKick)
+    ) {
+      throw new Error(
+        "Kick username and chatroom ID do not match. Use the values from your Kick channel page."
+      );
+    }
+
     const passwordHash = await hashPassword(input.password);
-    const user = await this.store.createUser(input, passwordHash);
+    const user = await this.store.createUser(
+      {
+        ...input,
+        kickUsername: normalizeKickSlug(input.kickUsername),
+        kickChatroomId: Number(input.kickChatroomId),
+      },
+      passwordHash
+    );
     return toPublicUser(user);
   }
 

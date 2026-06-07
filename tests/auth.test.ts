@@ -5,6 +5,22 @@ import path from "node:path";
 import { describe, it, before, after } from "node:test";
 import { AuthService } from "../src/auth/authService.js";
 import { UserStore } from "../src/auth/userStore.js";
+import {
+  normalizeKickSlug,
+  validateChatroomId,
+  validateKickSlug,
+} from "../src/kick/kickChannelLookup.js";
+
+describe("Kick account validation", () => {
+  it("accepts valid kick slugs", () => {
+    assert.equal(validateKickSlug("blakjac21"), null);
+    assert.equal(normalizeKickSlug("@Blakjac21"), "blakjac21");
+  });
+
+  it("rejects invalid chatroom ids", () => {
+    assert.match(validateChatroomId("abc") ?? "", /valid Kick chatroom ID/);
+  });
+});
 
 describe("AuthService", () => {
   let tempDir = "";
@@ -19,15 +35,18 @@ describe("AuthService", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("creates a new account", async () => {
+  it("creates a new account with a linked Kick channel", async () => {
     const user = await auth.signup({
       username: "streamer1",
       password: "password123",
       email: "streamer1@example.com",
+      kickUsername: "blakjac21",
+      kickChatroomId: 282833,
     });
 
     assert.equal(user.username, "streamer1");
-    assert.equal(user.email, "streamer1@example.com");
+    assert.equal(user.kickUsername, "blakjac21");
+    assert.equal(user.kickChatroomId, 282833);
   });
 
   it("rejects duplicate usernames", async () => {
@@ -36,8 +55,23 @@ describe("AuthService", () => {
         auth.signup({
           username: "streamer1",
           password: "anotherpass",
+          kickUsername: "otherkick",
+          kickChatroomId: 999999,
         }),
       /already taken/
+    );
+  });
+
+  it("rejects duplicate linked Kick accounts", async () => {
+    await assert.rejects(
+      () =>
+        auth.signup({
+          username: "streamer2",
+          password: "password123",
+          kickUsername: "blakjac21",
+          kickChatroomId: 282833,
+        }),
+      /Kick account is already linked/
     );
   });
 
@@ -48,6 +82,7 @@ describe("AuthService", () => {
     });
 
     assert.equal(user.username, "streamer1");
+    assert.equal(user.kickUsername, "blakjac21");
   });
 
   it("rejects invalid passwords", async () => {

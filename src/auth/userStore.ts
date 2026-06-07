@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SignupInput, UserRecord } from "./types.js";
+import { normalizeKickSlug } from "../kick/kickChannelLookup.js";
 import { normalizeUsername } from "../utils.js";
 
 interface UserDatabase {
@@ -33,11 +34,26 @@ export class UserStore {
       throw new Error("Email is already registered.");
     }
 
+    const kickSlug = normalizeKickSlug(input.kickUsername);
+    if (
+      db.users.some(
+        (user) => normalizeKickSlug(user.kickUsername) === kickSlug
+      )
+    ) {
+      throw new Error("This Kick account is already linked to another user.");
+    }
+
+    if (db.users.some((user) => user.kickChatroomId === input.kickChatroomId)) {
+      throw new Error("This Kick chatroom is already linked to another user.");
+    }
+
     const user: UserRecord = {
       id: randomUUID(),
       username: input.username.trim(),
       email: email || undefined,
       passwordHash,
+      kickUsername: kickSlug,
+      kickChatroomId: input.kickChatroomId,
       createdAt: new Date().toISOString(),
     };
 

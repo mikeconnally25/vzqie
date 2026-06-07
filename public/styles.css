@@ -254,6 +254,34 @@ h1 {
   align-items: end;
 }
 
+.auth-form-signup {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.auth-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-help {
+  margin: 12px 18px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.auth-help code {
+  color: var(--kick);
+}
+
+.linked-kick {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .auth-form label {
   display: flex;
   flex-direction: column;

@@ -7,6 +7,10 @@ const els = {
   accountForms: document.getElementById("account-forms"),
   accountSignedIn: document.getElementById("account-signed-in"),
   signedInUsername: document.getElementById("signed-in-username"),
+  signedInKick: document.getElementById("signed-in-kick"),
+  kickUsernameInput: document.getElementById("kick-username-input"),
+  kickChatroomInput: document.getElementById("kick-chatroom-input"),
+  verifyKickBtn: document.getElementById("verify-kick-btn"),
   signupForm: document.getElementById("signup-form"),
   loginForm: document.getElementById("login-form"),
   logoutBtn: document.getElementById("logout-btn"),
@@ -65,6 +69,7 @@ function renderAuthState(user) {
     els.accountPill.textContent = user.username;
     els.accountPill.classList.remove("hidden");
     els.signedInUsername.textContent = user.username;
+    els.signedInKick.textContent = `${user.kickUsername} (${user.kickChatroomId})`;
     els.accountSignedIn.classList.remove("hidden");
     els.accountForms.classList.add("hidden");
     return;
@@ -87,6 +92,10 @@ function setAuthTab(tab) {
 async function submitAuthForm(url, form) {
   const data = new FormData(form);
   const body = Object.fromEntries(data.entries());
+
+  if (url === "/api/auth/signup") {
+    body.kickChatroomId = Number(body.kickChatroomId);
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -221,6 +230,34 @@ els.keywordInput.addEventListener("keydown", (event) => {
 for (const button of els.authTabs) {
   button.addEventListener("click", () => setAuthTab(button.dataset.tab));
 }
+
+async function verifyKickAccount() {
+  const slug = els.kickUsernameInput.value.trim();
+  if (!slug) {
+    showToast("Enter your Kick username first");
+    return;
+  }
+
+  const response = await fetch(`/api/kick/lookup?slug=${encodeURIComponent(slug)}`);
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Could not verify Kick account");
+    return;
+  }
+
+  els.kickUsernameInput.value = result.channel.slug;
+  els.kickChatroomInput.value = String(result.channel.chatroomId);
+  showToast(`Linked Kick account verified: ${result.channel.slug}`);
+}
+
+els.verifyKickBtn.addEventListener("click", verifyKickAccount);
+
+els.kickUsernameInput.addEventListener("blur", () => {
+  if (els.kickUsernameInput.value.trim() && !els.kickChatroomInput.value) {
+    verifyKickAccount();
+  }
+});
 
 els.signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
