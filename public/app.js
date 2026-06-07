@@ -20,7 +20,6 @@ const els = {
   statWinners: document.getElementById("stat-winners"),
   entries: document.getElementById("entries-list"),
   eligible: document.getElementById("eligible-list"),
-  approval: document.getElementById("approval-list"),
   winners: document.getElementById("winners-list"),
   winnersPanel: document.getElementById("winners-panel"),
   toast: document.getElementById("toast"),
@@ -282,24 +281,6 @@ function renderState(state) {
     "No eligible viewers yet"
   );
 
-  renderList(
-    els.approval,
-    state.pendingApproval,
-    (entry) => `
-      <div class="row">
-        <div class="row-main">
-          <div class="row-title">${escapeHtml(entry.username)} ${riskBadge(entry.riskLevel)}</div>
-          <div class="row-meta">Risk score ${entry.riskScore}</div>
-        </div>
-        <div class="row-actions">
-          <button class="btn btn-secondary btn-sm" type="button" data-approve="${escapeHtml(entry.username)}">Approve</button>
-          <button class="btn btn-danger btn-sm" type="button" data-reject="${escapeHtml(entry.username)}">Reject</button>
-        </div>
-      </div>
-    `,
-    "No pending approvals"
-  );
-
   if (suppressWinnersPanel) {
     setWinnersPanelVisible(false);
   } else {
@@ -402,38 +383,6 @@ els.refreshBtn.addEventListener("click", async () => {
     showToast("Winner history cleared.");
   } catch (error) {
     showToast(error.message);
-  }
-});
-
-els.approval.addEventListener("click", async (event) => {
-  const approveBtn = event.target.closest("[data-approve]");
-  const rejectBtn = event.target.closest("[data-reject]");
-
-  if (approveBtn) {
-    try {
-      const { state } = await api("/api/approve", {
-        method: "POST",
-        body: JSON.stringify({ username: approveBtn.dataset.approve }),
-      });
-      renderState(state);
-      showToast(`Approved ${approveBtn.dataset.approve}`);
-    } catch (error) {
-      showToast(error.message);
-    }
-    return;
-  }
-
-  if (rejectBtn) {
-    try {
-      const { state } = await api("/api/reject", {
-        method: "POST",
-        body: JSON.stringify({ username: rejectBtn.dataset.reject }),
-      });
-      renderState(state);
-      showToast(`Rejected ${rejectBtn.dataset.reject}`);
-    } catch (error) {
-      showToast(error.message);
-    }
   }
 });
 

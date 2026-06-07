@@ -1,6 +1,6 @@
 import { allowed } from "./blacklist.js";
 import { canWin } from "./canWin.js";
-import { ALT_SCORE_THRESHOLD, PARTICIPATION_WINDOW_MS } from "./constants.js";
+import { PARTICIPATION_WINDOW_MS } from "./constants.js";
 import { drawWinners } from "./drawWinners.js";
 import { AltDetector, calculateRisk } from "./risk.js";
 import type {
@@ -41,13 +41,6 @@ function profileFromMessage(
   };
 }
 
-function requiresManualApproval(
-  riskLevel: ApprovalQueueEntry["riskLevel"],
-  altScore: number
-): boolean {
-  return riskLevel === "HIGH" || altScore >= ALT_SCORE_THRESHOLD;
-}
-
 export class GiveawayEngine {
   private readonly participants = new Map<string, Participant>();
   private readonly approvalQueue = new Map<string, ApprovalQueueEntry>();
@@ -80,7 +73,6 @@ export class GiveawayEngine {
 
     const userProfile = profileFromMessage(message, profile);
     const risk = calculateRisk(userProfile);
-    const altScore = this.altDetector.evaluate(userProfile);
     const timestamp = resolveMessageTimestamp(message.timestamp, this.now());
 
     const participant: Participant = {
@@ -89,40 +81,10 @@ export class GiveawayEngine {
       timestamp,
       riskScore: risk.score,
       riskLevel: risk.level,
-      approved: risk.level !== "HIGH",
+      approved: true,
       isSubscriber: message.isSubscriber,
       isFollower: message.isFollower,
     };
-
-    if (requiresManualApproval(risk.level, altScore)) {
-      const existing = this.approvalQueue.get(normalized);
-      const entry: ApprovalQueueEntry = {
-        username: message.username,
-        riskScore: risk.score,
-        riskLevel: risk.level,
-        approved: existing?.approved ?? false,
-        participant,
-      };
-
-      this.approvalQueue.set(normalized, entry);
-
-      if (!entry.approved) {
-        void this.auditLogger?.log({
-          action: "ENTRY_PENDING",
-          username: message.username,
-          metadata: { riskScore: risk.score, riskLevel: risk.level, altScore },
-        });
-
-        this.emitRiskUpdates();
-        return {
-          status: "pending_approval",
-          username: message.username,
-          riskLevel: risk.level,
-        };
-      }
-
-      participant.approved = true;
-    }
 
     this.participants.set(normalized, participant);
 

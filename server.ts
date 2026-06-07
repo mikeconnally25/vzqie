@@ -39,40 +39,6 @@ app.post("/api/refresh", (_req, res) => {
   res.json({ ok: true, state: service.getState() });
 });
 
-app.post("/api/approve", (req, res) => {
-  const username =
-    typeof req.body?.username === "string" ? req.body.username : "";
-  if (!username.trim()) {
-    res.status(400).json({ ok: false, error: "Username is required." });
-    return;
-  }
-
-  const ok = service.approve(username);
-  if (!ok) {
-    res.status(404).json({ ok: false, error: "Entry not found in approval queue." });
-    return;
-  }
-
-  res.json({ ok: true, state: service.getState() });
-});
-
-app.post("/api/reject", (req, res) => {
-  const username =
-    typeof req.body?.username === "string" ? req.body.username : "";
-  if (!username.trim()) {
-    res.status(400).json({ ok: false, error: "Username is required." });
-    return;
-  }
-
-  const ok = service.reject(username);
-  if (!ok) {
-    res.status(404).json({ ok: false, error: "Entry not found in approval queue." });
-    return;
-  }
-
-  res.json({ ok: true, state: service.getState() });
-});
-
 app.patch("/api/settings/keyword", (req, res) => {
   try {
     const keyword =

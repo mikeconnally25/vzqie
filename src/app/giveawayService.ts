@@ -1,12 +1,7 @@
 import { GiveawayEngine } from "../giveawayEngine.js";
 import type { EntryResult } from "../giveawayEngine.js";
 import { KickChatProvider } from "../kick/KickChatProvider.js";
-import type {
-  ApprovalQueueEntry,
-  ChatMessage,
-  Participant,
-  WinRecord,
-} from "../types.js";
+import type { ChatMessage, Participant, WinRecord } from "../types.js";
 
 export interface GiveawayServiceConfig {
   channel: string;
@@ -32,7 +27,6 @@ export interface DashboardState {
   entryKeyword: string;
   keywordEnabled: boolean;
   eligible: Participant[];
-  pendingApproval: ApprovalQueueEntry[];
   recentEntries: EntryLogItem[];
   winners: Array<{ username: string; timestamp: number }>;
 }
@@ -139,22 +133,6 @@ export class GiveawayService {
     this.broadcastState();
   }
 
-  approve(username: string): boolean {
-    const ok = this.engine.approve(username);
-    if (ok) {
-      this.broadcastState();
-    }
-    return ok;
-  }
-
-  reject(username: string): boolean {
-    const ok = this.engine.reject(username);
-    if (ok) {
-      this.broadcastState();
-    }
-    return ok;
-  }
-
   draw(count = 1): Participant[] {
     const winners = this.engine.draw(count, this.previousWins);
 
@@ -180,9 +158,6 @@ export class GiveawayService {
       entryKeyword: this.entryKeyword,
       keywordEnabled: this.keywordEnabled,
       eligible: this.engine.getEligibleParticipants(),
-      pendingApproval: this.engine
-        .getApprovalQueue()
-        .filter((entry) => !entry.approved),
       recentEntries: [...this.recentEntries],
       winners: this.previousWins.map((win) => ({
         username: win.username,
