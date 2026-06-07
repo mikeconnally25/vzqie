@@ -9,10 +9,12 @@
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
-    "kick-wss": "^1.0.5"
+    "kick-wss": "^1.0.5",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@types/ws": "^8.18.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   }

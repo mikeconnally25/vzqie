@@ -18,6 +18,7 @@ Use your Kick **channel slug** (the name in `kick.com/yourname`):
 
 ```bash
 export KICK_CHANNEL=yourname
+export KICK_CHATROOM_ID=123456   # recommended — bypasses blocked API lookup
 export GIVEAWAY_KEYWORD=!enter   # optional, default: !enter
 ```
 
@@ -49,13 +50,13 @@ Kick chat (Pusher) → KickChatProvider → GiveawayEngine → approve/draw
 
 `KickChatProvider` implements the `ChatProvider` interface from `src/types.ts`, so you can swap in a mock provider for tests or a different transport later.
 
-### Optional: find your chatroom ID manually
+### Find your chatroom ID
 
-`kick-wss` resolves your slug automatically. If lookup fails, open this in a browser while logged in:
+Open this in a browser while logged into Kick:
 
 `https://kick.com/api/v2/channels/yourname`
 
-Look for `chatroom.id` in the JSON response.
+Look for `chatroom.id` in the JSON and set `KICK_CHATROOM_ID` in `.env`. This skips the slug lookup API, which is often blocked outside your home network.
 
 ### Sending messages back to chat
 

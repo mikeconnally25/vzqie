@@ -8,11 +8,17 @@ import type { WinRecord } from "./src/types.js";
 const RISK_ICON = { LOW: "🟢", MEDIUM: "🟡", HIGH: "🔴" } as const;
 
 const channel = process.env.KICK_CHANNEL?.trim();
+const chatroomId = Number.parseInt(process.env.KICK_CHATROOM_ID ?? "", 10);
 const entryKeyword = (process.env.GIVEAWAY_KEYWORD ?? "!enter").toLowerCase();
 
 if (!channel) {
   console.error("Missing KICK_CHANNEL environment variable.");
   console.error("Example: KICK_CHANNEL=yourname npm run bot");
+  process.exit(1);
+}
+
+if (process.env.KICK_CHATROOM_ID && Number.isNaN(chatroomId)) {
+  console.error("KICK_CHATROOM_ID must be a number.");
   process.exit(1);
 }
 
@@ -38,6 +44,7 @@ const engine = new GiveawayEngine({
 
 const chat = new KickChatProvider({
   channel,
+  chatroomId: Number.isNaN(chatroomId) ? undefined : chatroomId,
   debug: process.env.KICK_DEBUG === "1",
 });
 
@@ -171,6 +178,9 @@ async function handleCommand(line: string): Promise<void> {
 
 async function main(): Promise<void> {
   console.log(`Connecting to Kick chat: ${channel}`);
+  if (!Number.isNaN(chatroomId)) {
+    console.log(`Using chatroom ID: ${chatroomId}`);
+  }
   console.log(`Entry keyword: ${entryKeyword}`);
   console.log("Type 'help' for streamer commands.\n");
 
