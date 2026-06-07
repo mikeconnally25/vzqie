@@ -294,6 +294,26 @@ h1 {
   gap: 10px;
 }
 
+#eligible-list {
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#eligible-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#eligible-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+#eligible-list::-webkit-scrollbar-thumb:hover {
+  background: #3a4656;
+}
+
 .empty-state {
   color: var(--muted);
   font-size: 0.95rem;
