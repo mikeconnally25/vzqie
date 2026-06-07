@@ -43,7 +43,7 @@ describe("GiveawayEngine", () => {
     );
   });
 
-  it("requires manual approval for high-risk users", () => {
+  it("auto-enters high-risk users into the draw pool", () => {
     const engine = new GiveawayEngine({ now: () => baseTime });
     const result = engine.addMessage(message("risky"), {
       accountAgeDays: 1,
@@ -51,25 +51,11 @@ describe("GiveawayEngine", () => {
       messageCount: 0,
     });
 
-    assert.equal(result?.status, "pending_approval");
-    assert.equal(engine.getEligibleParticipants().length, 0);
-    assert.equal(engine.getApprovalQueue().length, 1);
-  });
-
-  it("adds approved high-risk users to the draw pool", () => {
-    const engine = new GiveawayEngine({ now: () => baseTime });
-
-    engine.addMessage(message("risky"), {
-      accountAgeDays: 1,
-      followAgeDays: 0,
-      messageCount: 0,
-    });
-    assert.ok(engine.approve("risky"));
-
+    assert.equal(result?.status, "entered");
     assert.equal(engine.getEligibleParticipants().length, 1);
   });
 
-  it("excludes rejected users and recent winners from draws", () => {
+  it("excludes recent winners from draws", () => {
     const auditLogger = new InMemoryAuditLogger();
     const engine = new GiveawayEngine({
       now: () => baseTime,
@@ -78,12 +64,6 @@ describe("GiveawayEngine", () => {
 
     engine.addMessage(message("viewer1"));
     engine.addMessage(message("viewer2"));
-    engine.addMessage(message("risky"), {
-      accountAgeDays: 1,
-      followAgeDays: 0,
-      messageCount: 0,
-    });
-    engine.reject("risky");
 
     const winners = engine.draw(1, [
       { username: "viewer1", timestamp: baseTime - WIN_COOLDOWN_MS + 1 },
@@ -93,21 +73,4 @@ describe("GiveawayEngine", () => {
     assert.ok(auditLogger.entries.some((entry) => entry.action === "WINNER_DRAWN"));
   });
 
-  it("emits risk updates for pending approvals", () => {
-    const updates: string[] = [];
-    const engine = new GiveawayEngine({
-      now: () => baseTime,
-      onRiskUpdate: (payload) => {
-        updates.push(...payload.map((entry) => entry.username));
-      },
-    });
-
-    engine.addMessage(message("risky"), {
-      accountAgeDays: 1,
-      followAgeDays: 0,
-      messageCount: 0,
-    });
-
-    assert.deepEqual(updates, ["risky"]);
-  });
 });

@@ -1,0 +1,105 @@
+import express from "express";
+import { createServer } from "node:http";
+import { Server } from "socket.io";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadEnvFile } from "./src/loadEnv.js";
+import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
+
+loadEnvFile();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const port = Number(process.env.PORT ?? 3000);
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+const service = new GiveawayService(loadGiveawayConfig());
+
+service.onEvent((event) => {
+  io.emit(event.type, event.payload);
+});
+
+app.get("/api/state", (_req, res) => {
+  res.json(service.getState());
+});
+
+app.post("/api/draw", (req, res) => {
+  const count = Number(req.body?.count ?? 1);
+  const winners = service.draw(Number.isFinite(count) ? count : 1);
+  res.json({ winners, state: service.getState() });
+});
+
+app.post("/api/refresh", (_req, res) => {
+  service.refresh();
+  res.json({ ok: true, state: service.getState() });
+});
+
+app.patch("/api/settings/keyword", (req, res) => {
+  try {
+    const keyword =
+      typeof req.body?.keyword === "string" ? req.body.keyword : undefined;
+    const enabled =
+      typeof req.body?.enabled === "boolean" ? req.body.enabled : undefined;
+
+    if (keyword === undefined && enabled === undefined) {
+      res.status(400).json({ ok: false, error: "No settings provided." });
+      return;
+    }
+
+    const state = service.getState();
+    service.setKeywordSettings(
+      keyword ?? state.entryKeyword,
+      enabled ?? state.keywordEnabled
+    );
+
+    res.json({ ok: true, state: service.getState() });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+io.on("connection", (socket) => {
+  socket.emit("state", service.getState());
+});
+
+async function main(): Promise<void> {
+  httpServer.listen(port, () => {
+    console.log(`Dashboard: http://localhost:${port}`);
+  });
+
+  try {
+    await service.start();
+    const state = service.getState();
+    console.log(`Channel: #${state.channel}`);
+    if (process.env.KICK_CHATROOM_ID) {
+      console.log(`Chatroom ID: ${process.env.KICK_CHATROOM_ID}`);
+    }
+    console.log(
+      `Entry keyword: ${state.keywordEnabled ? state.entryKeyword : "off (all chat counts)"}`
+    );
+    if (!state.chatConnected) {
+      console.warn("Kick chat is offline — check .env and restart.");
+    }
+  } catch (error) {
+    console.error("Kick chat connection failed:", error);
+    console.error("The dashboard is running, but live chat is offline.");
+  }
+}
+
+process.on("SIGINT", async () => {
+  await service.stop();
+  process.exit(0);
+});
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});
