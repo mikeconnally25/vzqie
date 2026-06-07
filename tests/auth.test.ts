@@ -11,6 +11,11 @@ import {
   validateKickSlug,
 } from "../src/kick/kickChannelLookup.js";
 
+const mockKickLookup = async (slug: string) => ({
+  slug: normalizeKickSlug(slug),
+  chatroomId: 282833,
+});
+
 describe("Kick account validation", () => {
   it("accepts valid kick slugs", () => {
     assert.equal(validateKickSlug("blakjac21"), null);
@@ -28,7 +33,7 @@ describe("AuthService", () => {
 
   before(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), "giveaway-auth-"));
-    auth = new AuthService(new UserStore(tempDir));
+    auth = new AuthService(new UserStore(tempDir), mockKickLookup);
   });
 
   after(async () => {
@@ -41,7 +46,6 @@ describe("AuthService", () => {
       password: "password123",
       email: "streamer1@example.com",
       kickUsername: "blakjac21",
-      kickChatroomId: 282833,
     });
 
     assert.equal(user.username, "streamer1");
@@ -56,7 +60,6 @@ describe("AuthService", () => {
           username: "streamer1",
           password: "anotherpass",
           kickUsername: "otherkick",
-          kickChatroomId: 999999,
         }),
       /already taken/
     );
@@ -69,7 +72,6 @@ describe("AuthService", () => {
           username: "streamer2",
           password: "password123",
           kickUsername: "blakjac21",
-          kickChatroomId: 282833,
         }),
       /Kick account is already linked/
     );

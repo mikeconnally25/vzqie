@@ -22,6 +22,12 @@ export interface SignupInput {
   password: string;
   email?: string;
   kickUsername: string;
+}
+
+export interface CreateUserInput {
+  username: string;
+  email?: string;
+  kickUsername: string;
   kickChatroomId: number;
 }
 

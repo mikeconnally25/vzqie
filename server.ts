@@ -83,14 +83,12 @@ app.post("/api/auth/signup", async (req, res) => {
       typeof req.body?.email === "string" ? req.body.email : undefined;
     const kickUsername =
       typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "";
-    const kickChatroomId = Number(req.body?.kickChatroomId);
 
     const user = await authService.signup({
       username,
       password,
       email,
       kickUsername,
-      kickChatroomId,
     });
     req.session.userId = user.id;
 

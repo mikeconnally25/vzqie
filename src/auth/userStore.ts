@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { SignupInput, UserRecord } from "./types.js";
+import type { CreateUserInput, UserRecord } from "./types.js";
 import { normalizeKickSlug } from "../kick/kickChannelLookup.js";
 import { normalizeUsername } from "../utils.js";
 
@@ -17,7 +17,7 @@ export class UserStore {
     this.filePath = path.join(dataDir, "users.json");
   }
 
-  async createUser(input: SignupInput, passwordHash: string): Promise<UserRecord> {
+  async createUser(input: CreateUserInput, passwordHash: string): Promise<UserRecord> {
     const db = await this.load();
     const normalized = normalizeUsername(input.username);
 

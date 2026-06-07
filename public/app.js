@@ -9,7 +9,6 @@ const els = {
   signedInUsername: document.getElementById("signed-in-username"),
   signedInKick: document.getElementById("signed-in-kick"),
   kickUsernameInput: document.getElementById("kick-username-input"),
-  kickChatroomInput: document.getElementById("kick-chatroom-input"),
   verifyKickBtn: document.getElementById("verify-kick-btn"),
   signupForm: document.getElementById("signup-form"),
   loginForm: document.getElementById("login-form"),
@@ -92,10 +91,6 @@ function setAuthTab(tab) {
 async function submitAuthForm(url, form) {
   const data = new FormData(form);
   const body = Object.fromEntries(data.entries());
-
-  if (url === "/api/auth/signup") {
-    body.kickChatroomId = Number(body.kickChatroomId);
-  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -247,17 +242,10 @@ async function verifyKickAccount() {
   }
 
   els.kickUsernameInput.value = result.channel.slug;
-  els.kickChatroomInput.value = String(result.channel.chatroomId);
-  showToast(`Linked Kick account verified: ${result.channel.slug}`);
+  showToast(`Kick account verified: ${result.channel.slug}`);
 }
 
 els.verifyKickBtn.addEventListener("click", verifyKickAccount);
-
-els.kickUsernameInput.addEventListener("blur", () => {
-  if (els.kickUsernameInput.value.trim() && !els.kickChatroomInput.value) {
-    verifyKickAccount();
-  }
-});
 
 els.signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();

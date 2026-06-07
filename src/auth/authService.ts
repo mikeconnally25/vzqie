@@ -6,18 +6,22 @@ import {
   verifyPassword,
 } from "./password.js";
 import {
-  kickAccountsMatch,
   lookupKickChannel,
   normalizeKickSlug,
-  validateChatroomId,
   validateKickSlug,
+  type KickChannelInfo,
 } from "../kick/kickChannelLookup.js";
 import { UserStore } from "./userStore.js";
-import type { LoginInput, PublicUser, SignupInput } from "./types.js";
+import type { CreateUserInput, LoginInput, PublicUser, SignupInput } from "./types.js";
 import { toPublicUser } from "./types.js";
 
+export type KickLookup = (slug: string) => Promise<KickChannelInfo>;
+
 export class AuthService {
-  constructor(private readonly store = new UserStore()) {}
+  constructor(
+    private readonly store = new UserStore(),
+    private readonly resolveKick: KickLookup = lookupKickChannel
+  ) {}
 
   async signup(input: SignupInput): Promise<PublicUser> {
     const usernameError = validateUsername(input.username);
@@ -40,33 +44,24 @@ export class AuthService {
       throw new Error(kickSlugError);
     }
 
-    const chatroomError = validateChatroomId(input.kickChatroomId);
-    if (chatroomError) {
-      throw new Error(chatroomError);
-    }
-
-    let resolvedKick;
+    let resolvedKick: KickChannelInfo;
     try {
-      resolvedKick = await lookupKickChannel(input.kickUsername);
-    } catch {
-      resolvedKick = undefined;
-    }
-
-    if (
-      resolvedKick &&
-      !kickAccountsMatch(input.kickUsername, input.kickChatroomId, resolvedKick)
-    ) {
+      resolvedKick = await this.resolveKick(input.kickUsername);
+    } catch (error) {
       throw new Error(
-        "Kick username and chatroom ID do not match. Use the values from your Kick channel page."
+        error instanceof Error
+          ? error.message
+          : "Could not link Kick account. Check your Kick username and try again."
       );
     }
 
     const passwordHash = await hashPassword(input.password);
     const user = await this.store.createUser(
       {
-        ...input,
-        kickUsername: normalizeKickSlug(input.kickUsername),
-        kickChatroomId: Number(input.kickChatroomId),
+        username: input.username,
+        email: input.email,
+        kickUsername: normalizeKickSlug(resolvedKick.slug),
+        kickChatroomId: resolvedKick.chatroomId,
       },
       passwordHash
     );
