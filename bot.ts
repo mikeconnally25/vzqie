@@ -1,6 +1,9 @@
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
+import { loadEnvFile } from "./src/loadEnv.js";
+import { GiveawayService, isChatConfigured, loadGiveawayConfig } from "./src/app/giveawayService.js";
+
+loadEnvFile();
 
 const RISK_ICON = { LOW: "🟢", MEDIUM: "🟡", HIGH: "🔴" } as const;
 
@@ -56,6 +59,11 @@ async function handleCommand(line: string): Promise<void> {
 
 async function main(): Promise<void> {
   const config = loadGiveawayConfig();
+  if (!isChatConfigured(config)) {
+    console.error("Set KICK_CHANNEL and KICK_CHATROOM_ID in .env before running the bot.");
+    process.exit(1);
+  }
+
   console.log(`Connecting to Kick chat: ${config.channel}`);
   if (config.chatroomId) {
     console.log(`Using chatroom ID: ${config.chatroomId}`);

@@ -1,4 +1,6 @@
 import { KickChatProvider } from "../kick/KickChatProvider.js";
+import { ViewerStore } from "../auth/viewerStore.js";
+import { normalizeKickSlug } from "../kick/kickChannelLookup.js";
 import { GiveawayEngine } from "../giveawayEngine.js";
 import type { EntryResult } from "../giveawayEngine.js";
 import type { ChatMessage, Participant, WinRecord } from "../types.js";
@@ -17,6 +19,7 @@ export interface EntryLogItem {
   message: string;
   status: EntryResult["status"];
   riskLevel?: EntryResult["riskLevel"];
+  blockedReason?: string;
   timestamp: number;
 }
 
@@ -25,6 +28,7 @@ export interface DashboardState {
   chatConnected: boolean;
   entryKeyword: string;
   keywordEnabled: boolean;
+  registeredViewers: number;
   eligible: Participant[];
   recentEntries: EntryLogItem[];
   winners: Array<{ username: string; timestamp: number }>;
@@ -42,14 +46,20 @@ export type GiveawayEvent =
 export class GiveawayService {
   private readonly engine: GiveawayEngine;
   private readonly chat: KickChatProvider;
+  private readonly viewerStore: ViewerStore;
   private entryKeyword: string;
   private keywordEnabled: boolean;
   private readonly listeners = new Set<(event: GiveawayEvent) => void>();
   private readonly recentEntries: EntryLogItem[] = [];
   private readonly previousWins: WinRecord[] = [];
+  private registeredViewers = new Set<string>();
   private chatConnected = false;
 
-  constructor(private readonly config: GiveawayServiceConfig) {
+  constructor(
+    private readonly config: GiveawayServiceConfig,
+    viewerStore = new ViewerStore()
+  ) {
+    this.viewerStore = viewerStore;
     this.entryKeyword = config.entryKeyword?.trim() || "!enter";
     this.keywordEnabled = config.keywordEnabled ?? true;
 
@@ -69,7 +79,29 @@ export class GiveawayService {
     return () => this.listeners.delete(listener);
   }
 
+  async loadRegisteredViewers(): Promise<void> {
+    const usernames = await this.viewerStore.listKickUsernames();
+    this.registeredViewers = new Set(usernames);
+    this.broadcastState();
+  }
+
   async start(): Promise<void> {
+    await this.loadRegisteredViewers();
+
+    if (!isChatConfigured(this.config)) {
+      this.chatConnected = false;
+      this.emit({
+        type: "chat_status",
+        payload: {
+          connected: false,
+          channel: this.config.channel,
+          error: "Set KICK_CHANNEL and KICK_CHATROOM_ID in .env to connect chat.",
+        },
+      });
+      this.broadcastState();
+      return;
+    }
+
     try {
       await this.chat.connect();
       this.chatConnected = true;
@@ -94,6 +126,10 @@ export class GiveawayService {
   }
 
   async stop(): Promise<void> {
+    if (!isChatConfigured(this.config)) {
+      return;
+    }
+
     await this.chat.disconnect();
     this.chatConnected = false;
     this.emit({
@@ -138,6 +174,7 @@ export class GiveawayService {
       chatConnected: this.chatConnected,
       entryKeyword: this.entryKeyword,
       keywordEnabled: this.keywordEnabled,
+      registeredViewers: this.registeredViewers.size,
       eligible: this.engine.getEligibleParticipants(),
       recentEntries: [...this.recentEntries],
       winners: this.previousWins.map((win) => ({
@@ -155,17 +192,37 @@ export class GiveawayService {
       }
     }
 
+    if (!this.isRegisteredViewer(message.username)) {
+      this.recordEntry(message, {
+        status: "blocked",
+        blockedReason: "Sign up with your Kick account first",
+      });
+      return;
+    }
+
     const result = this.engine.addMessage(message);
     if (!result) {
       return;
     }
 
+    this.recordEntry(message, result);
+  }
+
+  private isRegisteredViewer(username: string): boolean {
+    return this.registeredViewers.has(normalizeKickSlug(username));
+  }
+
+  private recordEntry(
+    message: ChatMessage,
+    result: EntryResult & { blockedReason?: string }
+  ): void {
     const entry: EntryLogItem = {
       id: `${message.username}-${message.timestamp}`,
       username: message.username,
       message: message.message,
       status: result.status,
       riskLevel: result.riskLevel,
+      blockedReason: result.blockedReason,
       timestamp: message.timestamp,
     };
 
@@ -189,13 +246,17 @@ export class GiveawayService {
   }
 }
 
-export function loadGiveawayConfig(): GiveawayServiceConfig {
-  const channel = process.env.KICK_CHANNEL?.trim();
-  const chatroomId = Number.parseInt(process.env.KICK_CHATROOM_ID ?? "", 10);
+export function isChatConfigured(config: GiveawayServiceConfig): boolean {
+  return (
+    Boolean(config.channel) &&
+    config.channel !== "not-configured" &&
+    config.chatroomId !== undefined
+  );
+}
 
-  if (!channel) {
-    throw new Error("Missing KICK_CHANNEL environment variable.");
-  }
+export function loadGiveawayConfig(): GiveawayServiceConfig {
+  const channel = process.env.KICK_CHANNEL?.trim() || "not-configured";
+  const chatroomId = Number.parseInt(process.env.KICK_CHATROOM_ID ?? "", 10);
 
   if (process.env.KICK_CHATROOM_ID && Number.isNaN(chatroomId)) {
     throw new Error("KICK_CHATROOM_ID must be a number.");

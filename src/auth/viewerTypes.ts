@@ -19,6 +19,7 @@ export interface ViewerSignupInput {
   kickUsername: string;
   password: string;
   email?: string;
+  kickChatroomId?: number;
 }
 
 export interface ViewerLoginInput {

@@ -205,6 +205,54 @@ h1 {
   border-color: var(--border);
 }
 
+.pill-streamer {
+  color: var(--kick);
+  background: var(--kick-dim);
+  border-color: rgba(83, 252, 24, 0.35);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-card {
+  position: relative;
+  width: min(640px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.setup-hint {
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.auth-form-streamer {
+  grid-template-columns: 1fr;
+}
+
 .hidden {
   display: none !important;
 }

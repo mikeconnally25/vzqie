@@ -4,15 +4,26 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadEnvFile } from "./src/loadEnv.js";
 import { AuthService } from "./src/auth/authService.js";
+import { createRequireAuth } from "./src/auth/session.js";
 import { ViewerService } from "./src/auth/viewerService.js";
 import { lookupKickChannel } from "./src/kick/kickChannelLookup.js";
 import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
+
+loadEnvFile();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 3000);
 const sessionSecret =
   process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production";
+
+if (
+  process.env.NODE_ENV === "production" &&
+  sessionSecret === "dev-secret-change-me-in-production"
+) {
+  throw new Error("Set SESSION_SECRET before running in production.");
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,14 +47,21 @@ app.use(express.static(path.join(__dirname, "public")));
 const authService = new AuthService();
 const viewerService = new ViewerService();
 const service = new GiveawayService(loadGiveawayConfig());
+const requireAdmin = createRequireAuth(authService);
 
 service.onEvent((event) => {
   io.emit(event.type, event.payload);
 });
 
+app.get("/api/auth/setup", async (_req, res) => {
+  const adminCount = await authService.countUsers();
+  res.json({ needsSetup: adminCount === 0 });
+});
+
 app.get("/api/auth/me", async (req, res) => {
   let user = null;
   let viewer = null;
+  const adminCount = await authService.countUsers();
 
   if (req.session.userId) {
     user = await authService.getUserById(req.session.userId);
@@ -59,7 +77,11 @@ app.get("/api/auth/me", async (req, res) => {
     }
   }
 
-  res.json({ user, viewer });
+  res.json({
+    user,
+    viewer,
+    needsSetup: adminCount === 0,
+  });
 });
 
 app.get("/api/kick/lookup", async (req, res) => {
@@ -82,6 +104,15 @@ app.get("/api/kick/lookup", async (req, res) => {
 
 app.post("/api/auth/signup", async (req, res) => {
   try {
+    const adminCount = await authService.countUsers();
+    if (adminCount > 0) {
+      res.status(403).json({
+        ok: false,
+        error: "Streamer account already exists. Sign in instead.",
+      });
+      return;
+    }
+
     const username =
       typeof req.body?.username === "string" ? req.body.username : "";
     const password =
@@ -134,14 +165,21 @@ app.post("/api/viewers/signup", async (req, res) => {
       typeof req.body?.password === "string" ? req.body.password : "";
     const email =
       typeof req.body?.email === "string" ? req.body.email : undefined;
+    const kickChatroomIdRaw = req.body?.kickChatroomId;
+    const kickChatroomId =
+      kickChatroomIdRaw === undefined || kickChatroomIdRaw === ""
+        ? undefined
+        : Number(kickChatroomIdRaw);
 
     const viewer = await viewerService.signup({
       kickUsername,
       password,
       email,
+      kickChatroomId: Number.isFinite(kickChatroomId) ? kickChatroomId : undefined,
     });
     req.session.viewerId = viewer.id;
     req.session.userId = undefined;
+    await service.loadRegisteredViewers();
 
     res.status(201).json({ ok: true, viewer });
   } catch (error) {
@@ -188,18 +226,18 @@ app.get("/api/state", (_req, res) => {
   res.json(service.getState());
 });
 
-app.post("/api/draw", (req, res) => {
+app.post("/api/draw", requireAdmin, (req, res) => {
   const count = Number(req.body?.count ?? 1);
   const winners = service.draw(Number.isFinite(count) ? count : 1);
   res.json({ winners, state: service.getState() });
 });
 
-app.post("/api/refresh", (_req, res) => {
+app.post("/api/refresh", requireAdmin, (_req, res) => {
   service.refresh();
   res.json({ ok: true, state: service.getState() });
 });
 
-app.patch("/api/settings/keyword", (req, res) => {
+app.patch("/api/settings/keyword", requireAdmin, (req, res) => {
   try {
     const keyword =
       typeof req.body?.keyword === "string" ? req.body.keyword : undefined;
@@ -238,16 +276,25 @@ async function main(): Promise<void> {
   try {
     await service.start();
     const state = service.getState();
-    console.log(`Connected to Kick chat: #${state.channel}`);
+    console.log(`Channel: #${state.channel}`);
     if (process.env.KICK_CHATROOM_ID) {
       console.log(`Chatroom ID: ${process.env.KICK_CHATROOM_ID}`);
     }
+    console.log(`Registered viewers: ${state.registeredViewers}`);
     console.log(
       `Entry keyword: ${state.keywordEnabled ? state.entryKeyword : "off (all chat counts)"}`
     );
+    if (!state.chatConnected) {
+      console.warn("Kick chat is offline — check .env and restart.");
+    }
   } catch (error) {
     console.error("Kick chat connection failed:", error);
     console.error("The dashboard is running, but live chat is offline.");
+  }
+
+  const adminCount = await authService.countUsers();
+  if (adminCount === 0) {
+    console.warn("No streamer account yet — create one from the dashboard.");
   }
 }
 

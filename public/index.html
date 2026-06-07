@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blakjac21 Giveaway Dashboard</title>
+    <title>Kick Giveaway Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" href="/luffy-logo.png" type="image/png" />
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -18,10 +18,10 @@
       <header class="header">
         <div class="brand">
           <div class="logo">
-            <img src="/luffy-logo.png" alt="Blakjac21 Giveaway logo" width="52" height="52" />
+            <img src="/logo.svg" alt="Kick Giveaway logo" width="52" height="52" />
           </div>
           <div>
-            <h1>Blakjac21 Giveaway</h1>
+            <h1 id="site-title">Kick Giveaway</h1>
             <div class="keyword-controls">
               <label class="toggle">
                 <input id="keyword-enabled" type="checkbox" checked />
@@ -40,9 +40,11 @@
           </div>
         </div>
         <div class="header-actions">
-          <div id="account-pill" class="pill pill-account hidden">Guest</div>
+          <div id="streamer-pill" class="pill pill-streamer hidden">Streamer</div>
+          <div id="viewer-pill" class="pill pill-account hidden">Viewer</div>
           <div id="connection-pill" class="pill pill-offline">Offline</div>
-          <button id="draw-btn" class="btn btn-primary">Draw Winner</button>
+          <button id="streamer-btn" class="btn btn-secondary" type="button">Streamer</button>
+          <button id="draw-btn" class="btn btn-primary" type="button">Draw Winner</button>
         </div>
       </header>
 
@@ -65,7 +67,7 @@
         <section class="panel">
           <div class="panel-header">
             <h2>Live entries</h2>
-            <span class="panel-hint">Chat messages matching keyword</span>
+            <span class="panel-hint">Registered viewers matching keyword</span>
           </div>
           <div id="entries-list" class="list empty-state">
             Waiting for chat entries…
@@ -83,7 +85,7 @@
         <section class="panel panel-wide wheel-panel" id="wheel-panel">
           <div class="panel-header">
             <h2>Winner draw</h2>
-            <span class="panel-hint">Click Draw Winner to spin the reel</span>
+            <span class="panel-hint">Streamer sign-in required to draw</span>
           </div>
 
           <div class="wheel-stage">
@@ -140,6 +142,16 @@
                   maxlength="25"
                 />
               </label>
+              <label id="viewer-chatroom-field" class="hidden">
+                Kick chatroom ID
+                <input
+                  id="viewer-chatroom-id-input"
+                  name="kickChatroomId"
+                  type="number"
+                  min="1"
+                  placeholder="123456"
+                />
+              </label>
               <label>
                 Email <span class="optional">(optional)</span>
                 <input name="email" type="email" autocomplete="email" />
@@ -185,13 +197,70 @@
                 <input id="draw-count" type="number" min="1" max="10" value="1" />
               </label>
               <button id="refresh-btn" class="btn btn-secondary" type="button">
-                Refresh
+                Clear winners
               </button>
             </div>
           </div>
           <div id="winners-list" class="list empty-state">No winners yet</div>
         </section>
       </main>
+    </div>
+
+    <div id="streamer-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal-card" role="dialog" aria-labelledby="streamer-modal-title">
+        <div class="modal-header">
+          <h2 id="streamer-modal-title">Streamer controls</h2>
+          <button id="streamer-modal-close" class="btn btn-secondary" type="button">Close</button>
+        </div>
+
+        <div id="streamer-signed-in" class="account-signed-in hidden">
+          <p>Signed in as <strong id="signed-in-streamer"></strong></p>
+          <button id="streamer-logout-btn" class="btn btn-secondary" type="button">Sign out</button>
+        </div>
+
+        <div id="streamer-forms" class="account-forms">
+          <p id="streamer-setup-hint" class="setup-hint hidden">
+            Create the first streamer account to control draws and settings.
+          </p>
+          <div class="auth-tabs">
+            <button class="auth-tab active" type="button" data-streamer-tab="signup">
+              Create account
+            </button>
+            <button class="auth-tab" type="button" data-streamer-tab="login">
+              Sign in
+            </button>
+          </div>
+
+          <form id="streamer-signup-form" class="auth-form auth-form-streamer">
+            <label>
+              Username
+              <input name="username" type="text" autocomplete="username" required minlength="3" maxlength="24" />
+            </label>
+            <label>
+              Email <span class="optional">(optional)</span>
+              <input name="email" type="email" autocomplete="email" />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" autocomplete="new-password" required minlength="8" />
+            </label>
+            <button class="btn btn-primary" type="submit">Create streamer account</button>
+          </form>
+
+          <form id="streamer-login-form" class="auth-form hidden">
+            <label>
+              Username
+              <input name="username" type="text" autocomplete="username" required />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button class="btn btn-primary" type="submit">Sign in</button>
+          </form>
+        </div>
+      </div>
     </div>
 
     <div id="toast" class="toast hidden"></div>

@@ -7,6 +7,7 @@ import {
 import {
   lookupKickChannel,
   normalizeKickSlug,
+  validateChatroomId,
   validateKickSlug,
   type KickChannelInfo,
 } from "../kick/kickChannelLookup.js";
@@ -42,16 +43,7 @@ export class ViewerService {
       throw new Error(emailError);
     }
 
-    let resolvedKick: KickChannelInfo;
-    try {
-      resolvedKick = await this.resolveKick(input.kickUsername);
-    } catch (error) {
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Could not link Kick account. Check your Kick username and try again."
-      );
-    }
+    const resolvedKick = await this.resolveKickAccount(input);
 
     const passwordHash = await hashPassword(input.password);
     const viewer = await this.store.createViewer(
@@ -91,5 +83,31 @@ export class ViewerService {
 
   async countViewers(): Promise<number> {
     return this.store.count();
+  }
+
+  private async resolveKickAccount(
+    input: ViewerSignupInput
+  ): Promise<KickChannelInfo> {
+    if (input.kickChatroomId !== undefined) {
+      const chatroomError = validateChatroomId(input.kickChatroomId);
+      if (chatroomError) {
+        throw new Error(chatroomError);
+      }
+
+      return {
+        slug: normalizeKickSlug(input.kickUsername),
+        chatroomId: input.kickChatroomId,
+      };
+    }
+
+    try {
+      return await this.resolveKick(input.kickUsername);
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Could not link Kick account. Check your Kick username and try again."
+      );
+    }
   }
 }

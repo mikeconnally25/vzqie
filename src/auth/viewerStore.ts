@@ -83,6 +83,11 @@ export class ViewerStore {
     return db.viewers.length;
   }
 
+  async listKickUsernames(): Promise<string[]> {
+    const db = await this.load();
+    return db.viewers.map((viewer) => normalizeKickSlug(viewer.kickUsername));
+  }
+
   private async load(): Promise<ViewerDatabase> {
     if (this.cache) {
       return this.cache;

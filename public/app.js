@@ -1,16 +1,30 @@
 const socket = io();
 
-const WHEEL_ITEM_WIDTH = 166;
 const WHEEL_SPIN_MS = 5200;
 
 const els = {
+  siteTitle: document.getElementById("site-title"),
   keywordEnabled: document.getElementById("keyword-enabled"),
   keywordInput: document.getElementById("keyword-input"),
-  accountPill: document.getElementById("account-pill"),
+  streamerPill: document.getElementById("streamer-pill"),
+  viewerPill: document.getElementById("viewer-pill"),
+  streamerBtn: document.getElementById("streamer-btn"),
+  streamerModal: document.getElementById("streamer-modal"),
+  streamerModalClose: document.getElementById("streamer-modal-close"),
+  streamerSignedIn: document.getElementById("streamer-signed-in"),
+  signedInStreamer: document.getElementById("signed-in-streamer"),
+  streamerForms: document.getElementById("streamer-forms"),
+  streamerSetupHint: document.getElementById("streamer-setup-hint"),
+  streamerSignupForm: document.getElementById("streamer-signup-form"),
+  streamerLoginForm: document.getElementById("streamer-login-form"),
+  streamerLogoutBtn: document.getElementById("streamer-logout-btn"),
+  streamerTabs: document.querySelectorAll("[data-streamer-tab]"),
   viewerForms: document.getElementById("viewer-forms"),
   viewerSignedIn: document.getElementById("viewer-signed-in"),
   signedInViewerKick: document.getElementById("signed-in-viewer-kick"),
   viewerKickUsernameInput: document.getElementById("viewer-kick-username-input"),
+  viewerChatroomField: document.getElementById("viewer-chatroom-field"),
+  viewerChatroomIdInput: document.getElementById("viewer-chatroom-id-input"),
   verifyViewerKickBtn: document.getElementById("verify-viewer-kick-btn"),
   viewerSignupForm: document.getElementById("viewer-signup-form"),
   viewerLoginForm: document.getElementById("viewer-login-form"),
@@ -35,6 +49,8 @@ const els = {
 
 let dashboardState = null;
 let isSpinning = false;
+let isAdmin = false;
+let needsSetup = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -50,11 +66,15 @@ function riskBadge(level) {
   return `<span class="badge badge-${level.toLowerCase()}">${icon} ${level}</span>`;
 }
 
-function statusLabel(status) {
+function statusLabel(entry) {
+  if (entry.status === "blocked" && entry.blockedReason) {
+    return entry.blockedReason;
+  }
+
   return {
     entered: "Entered",
     blocked: "Blocked",
-  }[status] ?? status;
+  }[entry.status] ?? entry.status;
 }
 
 function showToast(message) {
@@ -92,6 +112,17 @@ function randomRarityClass() {
   if (roll > 0.92) return "wheel-item-legendary";
   if (roll > 0.78) return "wheel-item-epic";
   return "wheel-item-rare";
+}
+
+function getWheelItemStride() {
+  const item = els.wheelTrack.querySelector(".wheel-item:not(.wheel-item-placeholder)");
+  if (!item) {
+    return 166;
+  }
+
+  const styles = getComputedStyle(els.wheelTrack);
+  const gap = Number.parseFloat(styles.columnGap || styles.gap || "10");
+  return item.getBoundingClientRect().width + gap;
 }
 
 function buildReelItems(usernames, winnerUsername) {
@@ -170,10 +201,9 @@ async function spinWheel(usernames, winnerUsername) {
 
   await nextFrame();
 
+  const stride = getWheelItemStride();
   const offset =
-    winnerIndex * WHEEL_ITEM_WIDTH -
-    els.wheelViewport.offsetWidth / 2 +
-    WHEEL_ITEM_WIDTH / 2;
+    winnerIndex * stride - els.wheelViewport.offsetWidth / 2 + stride / 2;
 
   els.wheelTrack.style.transition = "none";
   els.wheelTrack.style.transform = "translateX(0)";
@@ -191,25 +221,88 @@ async function spinWheel(usernames, winnerUsername) {
   els.wheelResult.textContent = `🏆 ${winnerUsername} wins!`;
 }
 
-async function loadCurrentUser() {
-  const response = await fetch("/api/auth/me");
-  const result = await response.json();
-  renderViewerState(result.viewer);
+function updateAdminControls() {
+  const locked = !isAdmin;
+  els.drawBtn.disabled = locked || isSpinning;
+  els.refreshBtn.disabled = locked;
+  els.keywordEnabled.disabled = locked;
+  els.keywordInput.disabled = locked || !els.keywordEnabled.checked;
+  els.drawBtn.title = locked ? "Streamer sign-in required" : "";
+}
+
+function openStreamerModal() {
+  els.streamerModal.classList.remove("hidden");
+  els.streamerModal.setAttribute("aria-hidden", "false");
+}
+
+function closeStreamerModal() {
+  els.streamerModal.classList.add("hidden");
+  els.streamerModal.setAttribute("aria-hidden", "true");
+}
+
+function renderStreamerState(user) {
+  isAdmin = Boolean(user);
+  updateAdminControls();
+
+  if (user) {
+    els.streamerPill.textContent = user.username;
+    els.streamerPill.classList.remove("hidden");
+    els.streamerBtn.classList.add("hidden");
+    els.signedInStreamer.textContent = user.username;
+    els.streamerSignedIn.classList.remove("hidden");
+    els.streamerForms.classList.add("hidden");
+    closeStreamerModal();
+    return;
+  }
+
+  els.streamerPill.classList.add("hidden");
+  els.streamerBtn.classList.remove("hidden");
+  els.streamerSignedIn.classList.add("hidden");
+  els.streamerForms.classList.remove("hidden");
+  els.streamerSetupHint.classList.toggle("hidden", !needsSetup);
+  els.streamerTabs.forEach((button) => {
+    button.classList.toggle("hidden", needsSetup && button.dataset.streamerTab === "login");
+  });
+  els.streamerLoginForm.classList.toggle("hidden", needsSetup);
+  if (needsSetup) {
+    setStreamerTab("signup");
+  }
 }
 
 function renderViewerState(viewer) {
   if (viewer) {
-    els.accountPill.textContent = viewer.kickUsername;
-    els.accountPill.classList.remove("hidden");
+    els.viewerPill.textContent = viewer.kickUsername;
+    els.viewerPill.classList.remove("hidden");
     els.signedInViewerKick.textContent = `${viewer.kickUsername} (${viewer.kickChatroomId})`;
     els.viewerSignedIn.classList.remove("hidden");
     els.viewerForms.classList.add("hidden");
     return;
   }
 
-  els.accountPill.classList.add("hidden");
+  els.viewerPill.classList.add("hidden");
   els.viewerSignedIn.classList.add("hidden");
   els.viewerForms.classList.remove("hidden");
+}
+
+async function loadSession() {
+  const response = await fetch("/api/auth/me");
+  const result = await response.json();
+  needsSetup = Boolean(result.needsSetup);
+  renderStreamerState(result.user);
+  renderViewerState(result.viewer);
+
+  if (needsSetup) {
+    openStreamerModal();
+  }
+}
+
+function setStreamerTab(tab) {
+  for (const button of els.streamerTabs) {
+    button.classList.toggle("active", button.dataset.streamerTab === tab);
+  }
+
+  els.streamerSignupForm.classList.toggle("hidden", tab !== "signup");
+  els.streamerLoginForm.classList.toggle("hidden", tab !== "login");
 }
 
 function setViewerTab(tab) {
@@ -221,9 +314,36 @@ function setViewerTab(tab) {
   els.viewerLoginForm.classList.toggle("hidden", tab !== "login");
 }
 
+async function submitStreamerForm(url, form) {
+  const data = new FormData(form);
+  const body = Object.fromEntries(data.entries());
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Streamer account request failed");
+    return;
+  }
+
+  form.reset();
+  needsSetup = false;
+  renderStreamerState(result.user);
+  showToast(`Welcome, ${result.user.username}`);
+}
+
 async function submitViewerForm(url, form) {
   const data = new FormData(form);
   const body = Object.fromEntries(data.entries());
+
+  if (!body.kickChatroomId) {
+    delete body.kickChatroomId;
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -239,6 +359,7 @@ async function submitViewerForm(url, form) {
   }
 
   form.reset();
+  els.viewerChatroomField.classList.add("hidden");
   renderViewerState(result.viewer);
   showToast(`Linked Kick account: ${result.viewer.kickUsername}`);
 }
@@ -252,12 +373,19 @@ function syncKeywordControls(state) {
     els.keywordEnabled.checked = state.keywordEnabled;
   }
 
-  els.keywordInput.disabled = !state.keywordEnabled;
+  updateAdminControls();
 }
 
 function renderState(state) {
   dashboardState = state;
   syncKeywordControls(state);
+
+  const channelLabel = state.channel && state.channel !== "not-configured"
+    ? `${state.channel} Giveaway`
+    : "Kick Giveaway";
+  els.siteTitle.textContent = channelLabel;
+  document.title = channelLabel;
+
   els.statEligible.textContent = state.eligible.length;
   els.statEntries.textContent = state.recentEntries.length;
   els.statWinners.textContent = state.winners.length;
@@ -277,7 +405,7 @@ function renderState(state) {
           <div class="row-meta">${escapeHtml(entry.message)}</div>
         </div>
         <div>
-          <span class="status-${entry.status}">${statusLabel(entry.status)}</span>
+          <span class="status-${entry.status}">${escapeHtml(statusLabel(entry))}</span>
           ${entry.riskLevel ? riskBadge(entry.riskLevel) : ""}
         </div>
       </article>
@@ -316,6 +444,11 @@ function renderState(state) {
 }
 
 async function saveKeywordSettings(partial = {}) {
+  if (!isAdmin) {
+    showToast("Streamer sign-in required");
+    return;
+  }
+
   const keyword =
     partial.keyword !== undefined ? partial.keyword : els.keywordInput.value;
   const enabled =
@@ -358,9 +491,44 @@ els.keywordInput.addEventListener("keydown", (event) => {
   }
 });
 
+els.streamerBtn.addEventListener("click", openStreamerModal);
+els.streamerModalClose.addEventListener("click", closeStreamerModal);
+els.streamerModal.addEventListener("click", (event) => {
+  if (event.target instanceof HTMLElement && event.target.hasAttribute("data-close-modal")) {
+    closeStreamerModal();
+  }
+});
+
+for (const button of els.streamerTabs) {
+  button.addEventListener("click", () => setStreamerTab(button.dataset.streamerTab));
+}
+
 for (const button of els.viewerTabs) {
   button.addEventListener("click", () => setViewerTab(button.dataset.viewerTab));
 }
+
+els.streamerSignupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitStreamerForm("/api/auth/signup", els.streamerSignupForm);
+});
+
+els.streamerLoginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitStreamerForm("/api/auth/login", els.streamerLoginForm);
+});
+
+els.streamerLogoutBtn.addEventListener("click", async () => {
+  const response = await fetch("/api/auth/logout", { method: "POST" });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast("Could not sign out");
+    return;
+  }
+
+  renderStreamerState(null);
+  showToast("Signed out");
+});
 
 async function verifyViewerKickAccount() {
   const slug = els.viewerKickUsernameInput.value.trim();
@@ -373,10 +541,12 @@ async function verifyViewerKickAccount() {
   const result = await response.json();
 
   if (!response.ok || !result.ok) {
-    showToast(result.error ?? "Could not verify Kick account");
+    els.viewerChatroomField.classList.remove("hidden");
+    showToast("Lookup failed — enter your chatroom ID manually");
     return;
   }
 
+  els.viewerChatroomField.classList.add("hidden");
   els.viewerKickUsernameInput.value = result.channel.slug;
   showToast(`Kick account verified: ${result.channel.slug}`);
 }
@@ -408,7 +578,11 @@ els.viewerLogoutBtn.addEventListener("click", async () => {
 });
 
 els.drawBtn.addEventListener("click", async () => {
-  if (isSpinning) {
+  if (isSpinning || !isAdmin) {
+    if (!isAdmin) {
+      showToast("Streamer sign-in required");
+      openStreamerModal();
+    }
     return;
   }
 
@@ -419,7 +593,7 @@ els.drawBtn.addEventListener("click", async () => {
   }
 
   isSpinning = true;
-  els.drawBtn.disabled = true;
+  updateAdminControls();
 
   try {
     const count = Number(els.drawCount.value) || 1;
@@ -430,31 +604,43 @@ els.drawBtn.addEventListener("click", async () => {
     });
     const result = await response.json();
 
+    if (!response.ok) {
+      showToast(result.error ?? "Draw failed");
+      return;
+    }
+
     if (!result.winners?.length) {
       showToast("No winners drawn");
       return;
     }
 
-    const winner = result.winners[0];
     const usernames = eligible.map((entry) => entry.username);
 
-    await spinWheel(usernames, winner.username);
+    for (const winner of result.winners) {
+      await spinWheel(usernames, winner.username);
+      if (result.winners.length > 1) {
+        await wait(800);
+      }
+    }
 
     if (result.state) {
       renderState(result.state);
     }
 
-    showToast(`🏆 ${winner.username} won!`);
+    showToast(`🏆 ${result.winners.map((winner) => winner.username).join(", ")} won!`);
   } catch {
     showToast("Draw failed");
   } finally {
     isSpinning = false;
-    els.drawBtn.disabled = false;
+    updateAdminControls();
   }
 });
 
 els.refreshBtn.addEventListener("click", async () => {
-  if (isSpinning) {
+  if (isSpinning || !isAdmin) {
+    if (!isAdmin) {
+      showToast("Streamer sign-in required");
+    }
     return;
   }
 
@@ -462,7 +648,7 @@ els.refreshBtn.addEventListener("click", async () => {
   const result = await response.json();
 
   if (!response.ok || !result.ok) {
-    showToast("Could not refresh");
+    showToast(result.error ?? "Could not clear winners");
     return;
   }
 
@@ -470,12 +656,12 @@ els.refreshBtn.addEventListener("click", async () => {
     renderState(result.state);
   }
 
-  showToast("Winners refreshed");
+  showToast("Winners cleared");
 });
 
 socket.on("state", renderState);
 socket.on("entry", (entry) => {
-  showToast(`${entry.username} ${statusLabel(entry.status).toLowerCase()}`);
+  showToast(`${entry.username}: ${statusLabel(entry)}`);
 });
 socket.on("winner", (winner) => {
   if (!isSpinning) {
@@ -493,5 +679,7 @@ fetch("/api/state")
   .then(renderState)
   .catch(() => showToast("Failed to load dashboard state"));
 
-loadCurrentUser().catch(() => showToast("Failed to load account status"));
+loadSession().catch(() => showToast("Failed to load account status"));
 setViewerTab("signup");
+setStreamerTab("signup");
+updateAdminControls();
