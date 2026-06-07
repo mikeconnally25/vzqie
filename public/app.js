@@ -60,7 +60,6 @@ function syncKeywordControls(state) {
 }
 
 function renderState(state) {
-  els.channel.textContent = state.channel;
   syncKeywordControls(state);
   els.statEligible.textContent = state.eligible.length;
   els.statEntries.textContent = state.recentEntries.length;
