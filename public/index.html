@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kick Giveaway Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">
+            <img src="/logo.svg" alt="Kick Giveaway logo" width="52" height="52" />
+          </div>
+          <div>
+            <h1 id="site-title">Kick Giveaway</h1>
+            <div class="keyword-controls">
+              <label class="toggle">
+                <input id="keyword-enabled" type="checkbox" checked />
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span class="toggle-label">Keyword required</span>
+              </label>
+              <input
+                id="keyword-input"
+                class="keyword-input"
+                type="text"
+                value="!enter"
+                maxlength="32"
+                spellcheck="false"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div id="connection-pill" class="pill pill-offline">Offline</div>
+          <button id="draw-btn" class="btn btn-primary" type="button">Draw Winner</button>
+        </div>
+      </header>
+
+      <section class="stats stats-4">
+        <article class="stat-card">
+          <span class="stat-label">Eligible</span>
+          <strong id="stat-eligible" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Pending approval</span>
+          <strong id="stat-pending" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Recent entries</span>
+          <strong id="stat-entries" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Winners</span>
+          <strong id="stat-winners" class="stat-value">0</strong>
+        </article>
+      </section>
+
+      <main class="grid grid-2">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Live entries</h2>
+            <span class="panel-hint">Chat messages matching keyword</span>
+          </div>
+          <div id="entries-list" class="list empty-state">
+            Waiting for chat entries…
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Draw pool</h2>
+            <span class="panel-hint">Eligible participants right now</span>
+          </div>
+          <div id="eligible-list" class="list empty-state">No eligible viewers yet</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Approval queue</h2>
+            <span class="panel-hint">High-risk entries need manual review</span>
+          </div>
+          <div id="approval-list" class="list empty-state">No pending approvals</div>
+        </section>
+
+        <section class="panel wheel-panel" id="wheel-panel">
+          <div class="panel-header">
+            <h2>Winner draw</h2>
+            <span class="panel-hint">CS:GO-style reel animation</span>
+          </div>
+
+          <div class="wheel-stage">
+            <div class="wheel-viewport" id="wheel-viewport">
+              <div class="wheel-pointer" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-left" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-right" aria-hidden="true"></div>
+              <div class="wheel-track" id="wheel-track">
+                <div class="wheel-item wheel-item-placeholder">Waiting for entries…</div>
+              </div>
+            </div>
+            <p id="wheel-result" class="wheel-result hidden"></p>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Winners</h2>
+            <div class="draw-controls">
+              <label>
+                Count
+                <input id="draw-count" type="number" min="1" max="10" value="1" />
+              </label>
+              <button id="refresh-btn" class="btn btn-secondary" type="button">
+                Clear winners
+              </button>
+            </div>
+          </div>
+          <div id="winners-list" class="list empty-state">No winners yet</div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
