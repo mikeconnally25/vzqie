@@ -15,7 +15,6 @@ const els = {
   refreshBtn: document.getElementById("refresh-btn"),
   drawCount: document.getElementById("draw-count"),
   statEligible: document.getElementById("stat-eligible"),
-  statPending: document.getElementById("stat-pending"),
   statEntries: document.getElementById("stat-entries"),
   statWinners: document.getElementById("stat-winners"),
   entries: document.getElementById("entries-list"),
@@ -220,7 +219,6 @@ function renderState(state) {
     : "Kick Giveaway";
 
   els.statEligible.textContent = String(state.eligible.length);
-  els.statPending.textContent = String(state.pendingApproval.length);
   els.statEntries.textContent = String(state.recentEntries.length);
   els.statWinners.textContent = String(state.winners.length);
 
