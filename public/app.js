@@ -24,8 +24,13 @@ const els = {
   signedInViewerKick: document.getElementById("signed-in-viewer-kick"),
   viewerKickUsernameInput: document.getElementById("viewer-kick-username-input"),
   kickOAuthLink: document.getElementById("kick-oauth-link"),
+  kickOAuthPanel: document.getElementById("kick-oauth-panel"),
+  kickOAuthUnconfigured: document.getElementById("kick-oauth-unconfigured"),
+  kickOAuthReady: document.getElementById("kick-oauth-ready"),
   kickOAuthLinked: document.getElementById("kick-oauth-linked"),
+  kickOAuthComplete: document.getElementById("kick-oauth-complete"),
   kickOAuthLinkedName: document.getElementById("kick-oauth-linked-name"),
+  kickOAuthViewerName: document.getElementById("kick-oauth-viewer-name"),
   viewerChatroomField: document.getElementById("viewer-chatroom-field"),
   viewerChatroomIdInput: document.getElementById("viewer-chatroom-id-input"),
   verifyViewerKickBtn: document.getElementById("verify-viewer-kick-btn"),
@@ -280,26 +285,48 @@ function renderViewerState(viewer) {
     els.signedInViewerKick.textContent = `${viewer.kickUsername} (${viewer.kickChatroomId})`;
     els.viewerSignedIn.classList.remove("hidden");
     els.viewerForms.classList.add("hidden");
+    renderKickOAuthSection({ viewer });
     return;
   }
 
   els.viewerPill.classList.add("hidden");
   els.viewerSignedIn.classList.add("hidden");
   els.viewerForms.classList.remove("hidden");
+  renderKickOAuthSection({ viewer: null });
+}
+
+function renderKickOAuthSection(options = {}) {
+  const { configured = kickOAuthConfigured, pending = null, viewer = null } = options;
+
+  els.kickOAuthUnconfigured.classList.toggle("hidden", configured);
+  els.kickOAuthReady.classList.toggle(
+    "hidden",
+    !configured || Boolean(pending) || Boolean(viewer)
+  );
+  els.kickOAuthLinked.classList.toggle("hidden", !configured || !pending || Boolean(viewer));
+  els.kickOAuthComplete.classList.toggle("hidden", !viewer);
+
+  if (pending) {
+    els.kickOAuthLinkedName.textContent = pending.slug;
+  }
+
+  if (viewer) {
+    els.kickOAuthViewerName.textContent = `${viewer.kickUsername} (${viewer.kickChatroomId})`;
+  }
 }
 
 function renderPendingKickLink(pending) {
   if (!pending) {
-    els.kickOAuthLinked.classList.add("hidden");
     els.viewerKickUsernameInput.readOnly = false;
+    renderKickOAuthSection({ pending: null });
     return;
   }
 
-  els.kickOAuthLinked.classList.remove("hidden");
   els.kickOAuthLinkedName.textContent = pending.slug;
   els.viewerKickUsernameInput.value = pending.slug;
   els.viewerKickUsernameInput.readOnly = true;
   els.viewerChatroomField.classList.add("hidden");
+  renderKickOAuthSection({ pending });
 }
 
 async function loadSession() {
@@ -307,10 +334,12 @@ async function loadSession() {
   const result = await response.json();
   needsSetup = Boolean(result.needsSetup);
   kickOAuthConfigured = Boolean(result.kickOAuthConfigured);
-  els.kickOAuthLink.classList.toggle("hidden", !kickOAuthConfigured);
   renderStreamerState(result.user);
   renderViewerState(result.viewer);
   renderPendingKickLink(result.pendingKickLink);
+  if (!result.pendingKickLink && !result.viewer) {
+    renderKickOAuthSection({ configured: kickOAuthConfigured });
+  }
 
   if (needsSetup) {
     openStreamerModal();
@@ -706,6 +735,7 @@ const kickOAuthStatus = new URLSearchParams(window.location.search).get("kick_oa
 if (kickOAuthStatus === "linked") {
   showToast("Kick account linked — set a password to finish signup");
   setViewerTab("signup");
+  els.kickOAuthPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   history.replaceState({}, "", window.location.pathname);
 } else if (kickOAuthStatus === "failed") {
   showToast("Kick account linking failed");

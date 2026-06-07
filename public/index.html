@@ -101,10 +101,60 @@
           </div>
         </section>
 
+        <section class="panel panel-wide" id="kick-oauth-panel">
+          <div class="panel-header">
+            <h2>Link Kick account</h2>
+            <span class="panel-hint">Connect with Kick OAuth to enter giveaways</span>
+          </div>
+
+          <div id="kick-oauth-unconfigured" class="kick-oauth-body hidden">
+            <p class="kick-oauth-copy">
+              Kick OAuth is not configured on this server. Use manual signup below with your Kick username.
+            </p>
+          </div>
+
+          <div id="kick-oauth-ready" class="kick-oauth-body hidden">
+            <ol class="kick-oauth-steps">
+              <li>Click <strong>Link with Kick</strong> and sign in on Kick</li>
+              <li>Return here and finish creating your viewer account below</li>
+              <li>Type the entry keyword in chat when the giveaway is live</li>
+            </ol>
+            <div class="kick-oauth-actions">
+              <a id="kick-oauth-link" class="btn btn-primary kick-oauth-btn" href="/api/kick/oauth/start">
+                Link with Kick
+              </a>
+            </div>
+          </div>
+
+          <div id="kick-oauth-linked" class="kick-oauth-body hidden">
+            <div class="kick-oauth-status">
+              <span class="kick-oauth-badge">Linked</span>
+              <p>
+                Kick account:
+                <strong id="kick-oauth-linked-name">—</strong>
+              </p>
+              <p class="kick-oauth-copy">
+                Finish signup in the viewer account section below by setting a password.
+              </p>
+            </div>
+          </div>
+
+          <div id="kick-oauth-complete" class="kick-oauth-body hidden">
+            <div class="kick-oauth-status">
+              <span class="kick-oauth-badge">Connected</span>
+              <p>
+                Signed in as
+                <strong id="kick-oauth-viewer-name">—</strong>
+              </p>
+              <p class="kick-oauth-copy">You are registered and can enter giveaways from chat.</p>
+            </div>
+          </div>
+        </section>
+
         <section class="panel panel-wide">
           <div class="panel-header">
             <h2>Viewer signup</h2>
-            <span class="panel-hint">Link your Kick account to enter giveaways</span>
+            <span class="panel-hint">Create a password to finish your viewer account</span>
           </div>
 
           <div id="viewer-signed-in" class="account-signed-in hidden">
@@ -167,18 +217,11 @@
                 />
               </label>
               <div class="auth-form-actions">
-                <a id="kick-oauth-link" class="btn btn-secondary hidden" href="/api/kick/oauth/start">
-                  Link with Kick
-                </a>
                 <button id="verify-viewer-kick-btn" class="btn btn-secondary" type="button">
                   Verify Kick account
                 </button>
                 <button class="btn btn-primary" type="submit">Create viewer account</button>
               </div>
-              <p id="kick-oauth-linked" class="linked-kick hidden">
-                Kick account linked:
-                <strong id="kick-oauth-linked-name">—</strong>
-              </p>
             </form>
 
             <form id="viewer-login-form" class="auth-form hidden">

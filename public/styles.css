@@ -317,6 +317,59 @@ h1 {
   flex-wrap: wrap;
 }
 
+.kick-oauth-body {
+  padding: 0 18px 18px;
+}
+
+.kick-oauth-copy {
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.kick-oauth-steps {
+  margin: 0 0 18px;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.kick-oauth-steps strong {
+  color: var(--kick);
+}
+
+.kick-oauth-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kick-oauth-btn {
+  min-width: 180px;
+}
+
+.kick-oauth-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid rgba(83, 252, 24, 0.25);
+}
+
+.kick-oauth-badge {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--kick);
+  background: var(--kick-dim);
+  border: 1px solid rgba(83, 252, 24, 0.35);
+}
+
 .linked-kick {
   margin-top: 6px;
   color: var(--muted);
