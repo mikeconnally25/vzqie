@@ -24,8 +24,22 @@
             <h1>Blakjac21 Giveaway</h1>
             <p class="subtitle">
               Channel <span id="channel-name">—</span>
-              · Keyword <span id="entry-keyword">!enter</span>
             </p>
+            <div class="keyword-controls">
+              <label class="toggle">
+                <input id="keyword-enabled" type="checkbox" checked />
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span class="toggle-label">Keyword required</span>
+              </label>
+              <input
+                id="keyword-input"
+                class="keyword-input"
+                type="text"
+                value="!enter"
+                maxlength="32"
+                spellcheck="false"
+              />
+            </div>
           </div>
         </div>
         <div class="header-actions">

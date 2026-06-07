@@ -7,6 +7,7 @@ export interface GiveawayServiceConfig {
   channel: string;
   chatroomId?: number;
   entryKeyword?: string;
+  keywordEnabled?: boolean;
   debug?: boolean;
 }
 
@@ -23,6 +24,7 @@ export interface DashboardState {
   channel: string;
   chatConnected: boolean;
   entryKeyword: string;
+  keywordEnabled: boolean;
   eligible: Participant[];
   recentEntries: EntryLogItem[];
   winners: Array<{ username: string; timestamp: number }>;
@@ -40,14 +42,16 @@ export type GiveawayEvent =
 export class GiveawayService {
   private readonly engine: GiveawayEngine;
   private readonly chat: KickChatProvider;
-  private readonly entryKeyword: string;
+  private entryKeyword: string;
+  private keywordEnabled: boolean;
   private readonly listeners = new Set<(event: GiveawayEvent) => void>();
   private readonly recentEntries: EntryLogItem[] = [];
   private readonly previousWins: WinRecord[] = [];
   private chatConnected = false;
 
   constructor(private readonly config: GiveawayServiceConfig) {
-    this.entryKeyword = (config.entryKeyword ?? "!enter").toLowerCase();
+    this.entryKeyword = config.entryKeyword?.trim() || "!enter";
+    this.keywordEnabled = config.keywordEnabled ?? true;
 
     this.engine = new GiveawayEngine();
 
@@ -98,6 +102,18 @@ export class GiveawayService {
     });
   }
 
+  setKeywordSettings(keyword: string, enabled: boolean): void {
+    const trimmed = keyword.trim();
+
+    if (enabled && !trimmed) {
+      throw new Error("Keyword cannot be empty while keyword mode is enabled.");
+    }
+
+    this.entryKeyword = trimmed || this.entryKeyword;
+    this.keywordEnabled = enabled;
+    this.broadcastState();
+  }
+
   draw(count = 1): Participant[] {
     const winners = this.engine.draw(count, this.previousWins);
 
@@ -116,6 +132,7 @@ export class GiveawayService {
       channel: this.config.channel,
       chatConnected: this.chatConnected,
       entryKeyword: this.entryKeyword,
+      keywordEnabled: this.keywordEnabled,
       eligible: this.engine.getEligibleParticipants(),
       recentEntries: [...this.recentEntries],
       winners: this.previousWins.map((win) => ({
@@ -126,8 +143,11 @@ export class GiveawayService {
   }
 
   private handleChatMessage(message: ChatMessage): void {
-    if (!message.message.toLowerCase().includes(this.entryKeyword)) {
-      return;
+    if (this.keywordEnabled) {
+      const keyword = this.entryKeyword.toLowerCase();
+      if (!message.message.toLowerCase().includes(keyword)) {
+        return;
+      }
     }
 
     const result = this.engine.addMessage(message);
@@ -180,6 +200,7 @@ export function loadGiveawayConfig(): GiveawayServiceConfig {
     channel,
     chatroomId: Number.isNaN(chatroomId) ? undefined : chatroomId,
     entryKeyword: process.env.GIVEAWAY_KEYWORD ?? "!enter",
+    keywordEnabled: process.env.GIVEAWAY_KEYWORD_ENABLED !== "0",
     debug: process.env.KICK_DEBUG === "1",
   };
 }

@@ -31,6 +31,33 @@ app.post("/api/draw", (req, res) => {
   res.json({ winners, state: service.getState() });
 });
 
+app.patch("/api/settings/keyword", (req, res) => {
+  try {
+    const keyword =
+      typeof req.body?.keyword === "string" ? req.body.keyword : undefined;
+    const enabled =
+      typeof req.body?.enabled === "boolean" ? req.body.enabled : undefined;
+
+    if (keyword === undefined && enabled === undefined) {
+      res.status(400).json({ ok: false, error: "No settings provided." });
+      return;
+    }
+
+    const state = service.getState();
+    service.setKeywordSettings(
+      keyword ?? state.entryKeyword,
+      enabled ?? state.keywordEnabled
+    );
+
+    res.json({ ok: true, state: service.getState() });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 io.on("connection", (socket) => {
   socket.emit("state", service.getState());
 });
@@ -47,7 +74,9 @@ async function main(): Promise<void> {
     if (process.env.KICK_CHATROOM_ID) {
       console.log(`Chatroom ID: ${process.env.KICK_CHATROOM_ID}`);
     }
-    console.log(`Entry keyword: ${state.entryKeyword}`);
+    console.log(
+      `Entry keyword: ${state.keywordEnabled ? state.entryKeyword : "off (all chat counts)"}`
+    );
   } catch (error) {
     console.error("Kick chat connection failed:", error);
     console.error("The dashboard is running, but live chat is offline.");

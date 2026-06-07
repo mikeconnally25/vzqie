@@ -2,7 +2,8 @@ const socket = io();
 
 const els = {
   channel: document.getElementById("channel-name"),
-  keyword: document.getElementById("entry-keyword"),
+  keywordEnabled: document.getElementById("keyword-enabled"),
+  keywordInput: document.getElementById("keyword-input"),
   connection: document.getElementById("connection-pill"),
   drawBtn: document.getElementById("draw-btn"),
   drawCount: document.getElementById("draw-count"),
@@ -46,9 +47,21 @@ function renderList(container, items, renderItem, emptyText) {
   container.innerHTML = items.map(renderItem).join("");
 }
 
+function syncKeywordControls(state) {
+  if (document.activeElement !== els.keywordInput) {
+    els.keywordInput.value = state.entryKeyword;
+  }
+
+  if (document.activeElement !== els.keywordEnabled) {
+    els.keywordEnabled.checked = state.keywordEnabled;
+  }
+
+  els.keywordInput.disabled = !state.keywordEnabled;
+}
+
 function renderState(state) {
   els.channel.textContent = state.channel;
-  els.keyword.textContent = state.entryKeyword;
+  syncKeywordControls(state);
   els.statEligible.textContent = state.eligible.length;
   els.statEntries.textContent = state.recentEntries.length;
   els.statWinners.textContent = state.winners.length;
@@ -103,6 +116,49 @@ function renderState(state) {
     "No winners yet"
   );
 }
+
+async function saveKeywordSettings(partial = {}) {
+  const keyword =
+    partial.keyword !== undefined ? partial.keyword : els.keywordInput.value;
+  const enabled =
+    partial.enabled !== undefined ? partial.enabled : els.keywordEnabled.checked;
+
+  const response = await fetch("/api/settings/keyword", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keyword, enabled }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Failed to update keyword");
+    return;
+  }
+
+  renderState(result.state);
+  showToast(
+    enabled ? `Keyword set to "${result.state.entryKeyword}"` : "Keyword off — all chat counts"
+  );
+}
+
+els.keywordEnabled.addEventListener("change", () => {
+  saveKeywordSettings({ enabled: els.keywordEnabled.checked });
+});
+
+els.keywordInput.addEventListener("change", () => {
+  if (!els.keywordEnabled.checked) {
+    return;
+  }
+  saveKeywordSettings({ keyword: els.keywordInput.value });
+});
+
+els.keywordInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    els.keywordInput.blur();
+  }
+});
 
 els.drawBtn.addEventListener("click", async () => {
   const count = Number(els.drawCount.value) || 1;
