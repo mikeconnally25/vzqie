@@ -105,6 +105,12 @@ function getWheelItemStride() {
   return item.getBoundingClientRect().width + gap;
 }
 
+function getWheelFillCount() {
+  const stride = getWheelItemStride();
+  const viewportWidth = els.wheelViewport.offsetWidth;
+  return Math.max(8, Math.ceil(viewportWidth / stride) + 2);
+}
+
 function buildReelItems(usernames, winnerUsername) {
   const pool = usernames.length ? usernames : [winnerUsername];
   const totalTiles = 58 + Math.floor(Math.random() * 12);
@@ -140,7 +146,8 @@ function renderWheelIdle(eligible) {
   }
 
   const preview = [];
-  for (let i = 0; i < 12; i += 1) {
+  const fillCount = getWheelFillCount();
+  for (let i = 0; i < fillCount; i += 1) {
     preview.push({
       username: eligible[i % eligible.length].username,
       isWinner: false,
