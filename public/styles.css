@@ -489,6 +489,12 @@ h1 {
   padding: 0 18px 18px;
 }
 
+.draw-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .draw-controls label {
   display: flex;
   align-items: center;

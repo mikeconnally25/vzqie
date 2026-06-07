@@ -111,4 +111,8 @@ export class GiveawayEngine {
 
     return winners;
   }
+
+  resetParticipants(): void {
+    this.participants.clear();
+  }
 }

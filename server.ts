@@ -194,6 +194,11 @@ app.post("/api/draw", (req, res) => {
   res.json({ winners, state: service.getState() });
 });
 
+app.post("/api/refresh", (_req, res) => {
+  service.refresh();
+  res.json({ ok: true, state: service.getState() });
+});
+
 app.patch("/api/settings/keyword", (req, res) => {
   try {
     const keyword =

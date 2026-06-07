@@ -127,6 +127,13 @@ export class GiveawayService {
     return winners;
   }
 
+  refresh(): void {
+    this.recentEntries.length = 0;
+    this.previousWins.length = 0;
+    this.engine.resetParticipants();
+    this.broadcastState();
+  }
+
   getState(): DashboardState {
     return {
       channel: this.config.channel,

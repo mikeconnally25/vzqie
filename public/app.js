@@ -22,6 +22,7 @@ const els = {
   wheelResult: document.getElementById("wheel-result"),
   connection: document.getElementById("connection-pill"),
   drawBtn: document.getElementById("draw-btn"),
+  refreshBtn: document.getElementById("refresh-btn"),
   drawCount: document.getElementById("draw-count"),
   statEligible: document.getElementById("stat-eligible"),
   statEntries: document.getElementById("stat-entries"),
@@ -450,6 +451,26 @@ els.drawBtn.addEventListener("click", async () => {
     isSpinning = false;
     els.drawBtn.disabled = false;
   }
+});
+
+els.refreshBtn.addEventListener("click", async () => {
+  if (isSpinning) {
+    return;
+  }
+
+  const response = await fetch("/api/refresh", { method: "POST" });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast("Could not refresh");
+    return;
+  }
+
+  if (result.state) {
+    renderState(result.state);
+  }
+
+  showToast("Winners and entries refreshed");
 });
 
 socket.on("state", renderState);
