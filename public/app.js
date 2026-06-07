@@ -96,6 +96,39 @@ function getWheelFillCount() {
   return Math.max(8, Math.ceil(viewportWidth / stride) + 2);
 }
 
+function getWheelTrackTranslateX() {
+  const transform = getComputedStyle(els.wheelTrack).transform;
+  return transform === "none" ? 0 : new DOMMatrix(transform).m41;
+}
+
+function getWheelCenterOffset(itemIndex) {
+  const stride = getWheelItemStride();
+  const paddingLeft = Number.parseFloat(getComputedStyle(els.wheelTrack).paddingLeft) || 0;
+  const viewportWidth = els.wheelViewport.offsetWidth;
+  return paddingLeft + itemIndex * stride + stride / 2 - viewportWidth / 2;
+}
+
+function snapWheelToWinnerTile() {
+  const winnerEl = els.wheelTrack.querySelector(".wheel-item-winner");
+  if (!winnerEl) {
+    return;
+  }
+
+  const viewportRect = els.wheelViewport.getBoundingClientRect();
+  const winnerRect = winnerEl.getBoundingClientRect();
+  const viewportCenter = viewportRect.left + viewportRect.width / 2;
+  const winnerCenter = winnerRect.left + winnerRect.width / 2;
+  const drift = winnerCenter - viewportCenter;
+
+  if (Math.abs(drift) < 0.5) {
+    return;
+  }
+
+  const currentX = getWheelTrackTranslateX();
+  els.wheelTrack.style.transition = "none";
+  els.wheelTrack.style.transform = `translateX(${currentX - drift}px)`;
+}
+
 function buildReelItems(usernames, winnerUsername) {
   const pool = usernames.length ? usernames : [winnerUsername];
   const totalTiles = 58 + Math.floor(Math.random() * 12);
@@ -173,9 +206,7 @@ async function spinWheel(usernames, winnerUsername) {
 
   await nextFrame();
 
-  const stride = getWheelItemStride();
-  const offset =
-    winnerIndex * stride - els.wheelViewport.offsetWidth / 2 + stride / 2;
+  const offset = getWheelCenterOffset(winnerIndex);
 
   els.wheelTrack.style.transition = "none";
   els.wheelTrack.style.transform = "translateX(0)";
@@ -186,6 +217,7 @@ async function spinWheel(usernames, winnerUsername) {
   els.wheelTrack.style.transform = `translateX(-${offset}px)`;
 
   await wait(WHEEL_SPIN_MS + 120);
+  snapWheelToWinnerTile();
 
   els.wheelPanel.classList.remove("wheel-spinning");
   els.wheelPanel.classList.add("wheel-won");
@@ -327,7 +359,13 @@ async function handleDraw() {
     suppressWinnersPanel = true;
     setWinnersPanelVisible(false);
 
-    const usernames = state.eligible.map((participant) => participant.username);
+    const usernames = [
+      ...new Set(
+        state.eligible
+          .map((participant) => participant.username)
+          .concat(winners.map((winner) => winner.username))
+      ),
+    ];
     for (const winner of winners) {
       await spinWheel(usernames, winner.username);
     }

@@ -497,11 +497,6 @@ h1 {
   will-change: transform;
 }
 
-.wheel-panel.wheel-spinning .wheel-track,
-.wheel-panel.wheel-won .wheel-track {
-  padding: 0 50%;
-}
-
 .wheel-item {
   flex: 0 0 156px;
   height: 112px;
