@@ -1,4 +1,5 @@
 const WHEEL_SPIN_MS = 5200;
+const WINNERS_REVEAL_DELAY_MS = 3000;
 
 const socket = io();
 
@@ -21,11 +22,13 @@ const els = {
   eligible: document.getElementById("eligible-list"),
   approval: document.getElementById("approval-list"),
   winners: document.getElementById("winners-list"),
+  winnersPanel: document.getElementById("winners-panel"),
   toast: document.getElementById("toast"),
 };
 
 let dashboardState = null;
 let isSpinning = false;
+let suppressWinnersPanel = false;
 let keywordSaveTimer;
 
 function escapeHtml(value) {
@@ -211,6 +214,26 @@ function formatTime(timestamp) {
   });
 }
 
+function setWinnersPanelVisible(visible) {
+  els.winnersPanel.classList.toggle("hidden", !visible);
+}
+
+function renderWinnersList(winners) {
+  renderList(
+    els.winners,
+    winners,
+    (winner) => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${escapeHtml(winner.username)}</div>
+          <div class="row-meta">Drawn ${formatTime(winner.timestamp)}</div>
+        </div>
+      </div>
+    `,
+    "No winners yet"
+  );
+}
+
 function renderState(state) {
   dashboardState = state;
 
@@ -277,19 +300,12 @@ function renderState(state) {
     "No pending approvals"
   );
 
-  renderList(
-    els.winners,
-    state.winners,
-    (winner) => `
-      <div class="row">
-        <div class="row-main">
-          <div class="row-title">${escapeHtml(winner.username)}</div>
-          <div class="row-meta">Drawn ${formatTime(winner.timestamp)}</div>
-        </div>
-      </div>
-    `,
-    "No winners yet"
-  );
+  if (suppressWinnersPanel) {
+    setWinnersPanelVisible(false);
+  } else {
+    renderWinnersList(state.winners);
+    setWinnersPanelVisible(true);
+  }
 
   renderWheelIdle(state.eligible);
 }
@@ -351,14 +367,26 @@ async function handleDraw() {
       return;
     }
 
+    suppressWinnersPanel = true;
+    setWinnersPanelVisible(false);
+
     const usernames = state.eligible.map((participant) => participant.username);
     for (const winner of winners) {
       await spinWheel(usernames, winner.username);
     }
 
+    await wait(WINNERS_REVEAL_DELAY_MS);
+
+    suppressWinnersPanel = false;
     renderState(state);
   } catch (error) {
     showToast(error.message);
+    suppressWinnersPanel = false;
+    if (dashboardState) {
+      renderState(dashboardState);
+    } else {
+      setWinnersPanelVisible(true);
+    }
   } finally {
     isSpinning = false;
     updateDrawControls();
