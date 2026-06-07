@@ -470,7 +470,7 @@ els.refreshBtn.addEventListener("click", async () => {
     renderState(result.state);
   }
 
-  showToast("Winners and entries refreshed");
+  showToast("Winners refreshed");
 });
 
 socket.on("state", renderState);
