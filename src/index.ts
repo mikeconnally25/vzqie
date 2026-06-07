@@ -1,3 +1,10 @@
+export { GiveawayService, loadGiveawayConfig } from "./app/giveawayService.js";
+export type {
+  DashboardState,
+  EntryLogItem,
+  GiveawayEvent,
+  GiveawayServiceConfig,
+} from "./app/giveawayService.js";
 export { AUDIT_LOG_SCHEMA, InMemoryAuditLogger } from "./audit.js";
 export { allowed } from "./blacklist.js";
 export { canWin, getLastWin } from "./canWin.js";
@@ -10,6 +17,10 @@ export {
 } from "./constants.js";
 export { dedupeParticipants, drawWinners } from "./drawWinners.js";
 export type { DrawWinnersOptions } from "./drawWinners.js";
+export { KickChatProvider } from "./kick/KickChatProvider.js";
+export type { KickChatProviderOptions } from "./kick/KickChatProvider.js";
+export { mapKickMessage, stripKickEmotes } from "./kick/mapKickMessage.js";
+export type { KickChatMessageEvent } from "./kick/mapKickMessage.js";
 export { GiveawayEngine } from "./giveawayEngine.js";
 export type {
   EntryResult,
@@ -18,7 +29,6 @@ export type {
 } from "./giveawayEngine.js";
 export { AltDetector, calculateRisk } from "./risk.js";
 export type {
-  ApprovalQueueEntry,
   AuditAction,
   AuditLogEntry,
   AuditLogger,
@@ -27,7 +37,6 @@ export type {
   Participant,
   RiskLevel,
   RiskResult,
-  RiskUpdatePayload,
   UserProfile,
   WinRecord,
 } from "./types.js";

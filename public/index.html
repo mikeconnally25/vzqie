@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kick Giveaway Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">
+            <img src="/logo.svg" alt="Kick Giveaway logo" width="52" height="52" />
+          </div>
+          <div>
+            <h1 id="site-title">Kick Giveaway</h1>
+            <div class="keyword-controls">
+              <label class="toggle">
+                <input id="keyword-enabled" type="checkbox" checked />
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span class="toggle-label">Keyword required</span>
+              </label>
+              <input
+                id="keyword-input"
+                class="keyword-input"
+                type="text"
+                value="!enter"
+                maxlength="32"
+                spellcheck="false"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div id="streamer-pill" class="pill pill-streamer hidden">Streamer</div>
+          <div id="viewer-pill" class="pill pill-account hidden">Viewer</div>
+          <div id="connection-pill" class="pill pill-offline">Offline</div>
+          <button id="streamer-btn" class="btn btn-secondary" type="button">Streamer</button>
+          <button id="draw-btn" class="btn btn-primary" type="button">Draw Winner</button>
+        </div>
+      </header>
+
+      <section class="stats stats-3">
+        <article class="stat-card">
+          <span class="stat-label">Eligible</span>
+          <strong id="stat-eligible" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Recent entries</span>
+          <strong id="stat-entries" class="stat-value">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Winners</span>
+          <strong id="stat-winners" class="stat-value">0</strong>
+        </article>
+      </section>
+
+      <main class="grid grid-2">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Live entries</h2>
+            <span class="panel-hint">Registered viewers matching keyword</span>
+          </div>
+          <div id="entries-list" class="list empty-state">
+            Waiting for chat entries…
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Draw pool</h2>
+            <span class="panel-hint">Eligible participants right now</span>
+          </div>
+          <div id="eligible-list" class="list empty-state">No eligible viewers yet</div>
+        </section>
+
+        <section class="panel panel-wide wheel-panel" id="wheel-panel">
+          <div class="panel-header">
+            <h2>Winner draw</h2>
+            <span class="panel-hint">Streamer sign-in required to draw</span>
+          </div>
+
+          <div class="wheel-stage">
+            <div class="wheel-viewport" id="wheel-viewport">
+              <div class="wheel-pointer" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-left" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-right" aria-hidden="true"></div>
+              <div class="wheel-track" id="wheel-track">
+                <div class="wheel-item wheel-item-placeholder">Waiting for entries…</div>
+              </div>
+            </div>
+            <p id="wheel-result" class="wheel-result hidden"></p>
+          </div>
+        </section>
+
+        <section class="panel panel-wide" id="kick-oauth-panel">
+          <div class="panel-header">
+            <h2>Link Kick account</h2>
+            <span class="panel-hint">Connect with Kick OAuth to enter giveaways</span>
+          </div>
+
+          <div id="kick-oauth-unconfigured" class="kick-oauth-body hidden">
+            <p class="kick-oauth-copy">
+              Kick OAuth is not configured on this server. Use manual signup below with your Kick username.
+            </p>
+          </div>
+
+          <div id="kick-oauth-ready" class="kick-oauth-body hidden">
+            <ol class="kick-oauth-steps">
+              <li>Click <strong>Link with Kick</strong> and sign in on Kick</li>
+              <li>Return here and finish creating your viewer account below</li>
+              <li>Type the entry keyword in chat when the giveaway is live</li>
+            </ol>
+            <div class="kick-oauth-actions">
+              <a id="kick-oauth-link" class="btn btn-primary kick-oauth-btn" href="/api/kick/oauth/start">
+                Link with Kick
+              </a>
+            </div>
+          </div>
+
+          <div id="kick-oauth-linked" class="kick-oauth-body hidden">
+            <div class="kick-oauth-status">
+              <span class="kick-oauth-badge">Linked</span>
+              <p>
+                Kick account:
+                <strong id="kick-oauth-linked-name">—</strong>
+              </p>
+              <p class="kick-oauth-copy">
+                Finish signup in the viewer account section below by setting a password.
+              </p>
+            </div>
+          </div>
+
+          <div id="kick-oauth-complete" class="kick-oauth-body hidden">
+            <div class="kick-oauth-status">
+              <span class="kick-oauth-badge">Connected</span>
+              <p>
+                Signed in as
+                <strong id="kick-oauth-viewer-name">—</strong>
+              </p>
+              <p class="kick-oauth-copy">You are registered and can enter giveaways from chat.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Viewer signup</h2>
+            <span class="panel-hint">Create a password to finish your viewer account</span>
+          </div>
+
+          <div id="viewer-signed-in" class="account-signed-in hidden">
+            <div>
+              <p>
+                Linked Kick:
+                <strong id="signed-in-viewer-kick">—</strong>
+              </p>
+            </div>
+            <button id="viewer-logout-btn" class="btn btn-secondary" type="button">
+              Sign out
+            </button>
+          </div>
+
+          <div id="viewer-forms" class="account-forms">
+            <div class="auth-tabs">
+              <button class="auth-tab active" type="button" data-viewer-tab="signup">
+                Create viewer account
+              </button>
+              <button class="auth-tab" type="button" data-viewer-tab="login">
+                Viewer sign in
+              </button>
+            </div>
+
+            <form id="viewer-signup-form" class="auth-form auth-form-viewer">
+              <label>
+                Kick username
+                <input
+                  id="viewer-kick-username-input"
+                  name="kickUsername"
+                  type="text"
+                  placeholder="your_kick_name"
+                  required
+                  minlength="2"
+                  maxlength="25"
+                />
+              </label>
+              <label id="viewer-chatroom-field" class="hidden">
+                Kick chatroom ID
+                <input
+                  id="viewer-chatroom-id-input"
+                  name="kickChatroomId"
+                  type="number"
+                  min="1"
+                  placeholder="123456"
+                />
+              </label>
+              <label>
+                Email <span class="optional">(optional)</span>
+                <input name="email" type="email" autocomplete="email" />
+              </label>
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  autocomplete="new-password"
+                  required
+                  minlength="8"
+                />
+              </label>
+              <div class="auth-form-actions">
+                <button id="verify-viewer-kick-btn" class="btn btn-secondary" type="button">
+                  Verify Kick account
+                </button>
+                <button class="btn btn-primary" type="submit">Create viewer account</button>
+              </div>
+            </form>
+
+            <form id="viewer-login-form" class="auth-form hidden">
+              <label>
+                Kick username
+                <input name="kickUsername" type="text" required minlength="2" maxlength="25" />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required />
+              </label>
+              <button class="btn btn-primary" type="submit">Sign in</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Winners</h2>
+            <div class="draw-controls">
+              <label>
+                Count
+                <input id="draw-count" type="number" min="1" max="10" value="1" />
+              </label>
+              <button id="refresh-btn" class="btn btn-secondary" type="button">
+                Clear winners
+              </button>
+            </div>
+          </div>
+          <div id="winners-list" class="list empty-state">No winners yet</div>
+        </section>
+      </main>
+    </div>
+
+    <div id="streamer-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal-card" role="dialog" aria-labelledby="streamer-modal-title">
+        <div class="modal-header">
+          <h2 id="streamer-modal-title">Streamer controls</h2>
+          <button id="streamer-modal-close" class="btn btn-secondary" type="button">Close</button>
+        </div>
+
+        <div id="streamer-signed-in" class="account-signed-in hidden">
+          <p>Signed in as <strong id="signed-in-streamer"></strong></p>
+          <button id="streamer-logout-btn" class="btn btn-secondary" type="button">Sign out</button>
+        </div>
+
+        <div id="streamer-forms" class="account-forms">
+          <p id="streamer-setup-hint" class="setup-hint hidden">
+            Create the first streamer account to control draws and settings.
+          </p>
+          <div class="auth-tabs">
+            <button class="auth-tab active" type="button" data-streamer-tab="signup">
+              Create account
+            </button>
+            <button class="auth-tab" type="button" data-streamer-tab="login">
+              Sign in
+            </button>
+          </div>
+
+          <form id="streamer-signup-form" class="auth-form auth-form-streamer">
+            <label>
+              Username
+              <input name="username" type="text" autocomplete="username" required minlength="3" maxlength="24" />
+            </label>
+            <label>
+              Email <span class="optional">(optional)</span>
+              <input name="email" type="email" autocomplete="email" />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" autocomplete="new-password" required minlength="8" />
+            </label>
+            <button class="btn btn-primary" type="submit">Create streamer account</button>
+          </form>
+
+          <form id="streamer-login-form" class="auth-form hidden">
+            <label>
+              Username
+              <input name="username" type="text" autocomplete="username" required />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button class="btn btn-primary" type="submit">Sign in</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

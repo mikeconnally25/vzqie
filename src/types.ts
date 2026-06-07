@@ -28,7 +28,6 @@ export interface Participant {
   timestamp: number;
   riskScore: number;
   riskLevel: RiskLevel;
-  approved: boolean;
   isSubscriber?: boolean;
   isFollower?: boolean;
 }
@@ -43,19 +42,7 @@ export interface RiskResult {
   level: RiskLevel;
 }
 
-export interface ApprovalQueueEntry {
-  username: string;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  approved: boolean;
-  participant?: Participant;
-}
-
-export type AuditAction =
-  | "ENTRY_APPROVED"
-  | "ENTRY_REJECTED"
-  | "ENTRY_PENDING"
-  | "WINNER_DRAWN";
+export type AuditAction = "ENTRY" | "WINNER_DRAWN";
 
 export interface AuditLogEntry {
   action: AuditAction;
@@ -65,10 +52,4 @@ export interface AuditLogEntry {
 
 export interface AuditLogger {
   log(entry: AuditLogEntry): Promise<void>;
-}
-
-export interface RiskUpdatePayload {
-  username: string;
-  riskLevel: RiskLevel;
-  riskScore: number;
 }
