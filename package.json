@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "bot": "node --import tsx bot.ts",
+    "bot": "node --env-file=.env --import tsx bot.ts",
     "demo": "node --import tsx demo.ts",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
