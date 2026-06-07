@@ -16,9 +16,7 @@ const els = {
   refreshBtn: document.getElementById("refresh-btn"),
   drawCount: document.getElementById("draw-count"),
   statEligible: document.getElementById("stat-eligible"),
-  statEntries: document.getElementById("stat-entries"),
   statWinners: document.getElementById("stat-winners"),
-  entries: document.getElementById("entries-list"),
   eligible: document.getElementById("eligible-list"),
   winners: document.getElementById("winners-list"),
   winnersPanel: document.getElementById("winners-panel"),
@@ -42,19 +40,6 @@ function riskBadge(level) {
   if (!level) return "";
   const icon = { LOW: "🟢", MEDIUM: "🟡", HIGH: "🔴" }[level] ?? "";
   return `<span class="badge badge-${level.toLowerCase()}">${icon} ${level}</span>`;
-}
-
-function statusLabel(entry) {
-  if (entry.status === "blocked" && entry.blockedReason) {
-    return entry.blockedReason;
-  }
-
-  return {
-    entered: "Entered",
-    pending_approval: "Pending approval",
-    rejected: "Rejected",
-    blocked: "Blocked",
-  }[entry.status] ?? entry.status;
 }
 
 function showToast(message) {
@@ -248,7 +233,6 @@ function renderState(state) {
     : "Kick Giveaway";
 
   els.statEligible.textContent = String(state.eligible.length);
-  els.statEntries.textContent = String(state.recentEntries.length);
   els.statWinners.textContent = String(state.winners.length);
 
   if (document.activeElement !== els.keywordInput) {
@@ -258,21 +242,6 @@ function renderState(state) {
     els.keywordEnabled.checked = state.keywordEnabled;
   }
   els.keywordInput.disabled = !state.keywordEnabled;
-
-  renderList(
-    els.entries,
-    state.recentEntries,
-    (entry) => `
-      <div class="row">
-        <div class="row-main">
-          <div class="row-title">${escapeHtml(entry.username)} ${riskBadge(entry.riskLevel)}</div>
-          <div class="row-meta">${escapeHtml(entry.message)} · <span class="status-${entry.status}">${escapeHtml(statusLabel(entry))}</span></div>
-        </div>
-        <div class="row-meta">${formatTime(entry.timestamp)}</div>
-      </div>
-    `,
-    "Waiting for chat entries…"
-  );
 
   renderList(
     els.eligible,
