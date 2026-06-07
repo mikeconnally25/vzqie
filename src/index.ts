@@ -10,6 +10,10 @@ export {
 } from "./constants.js";
 export { dedupeParticipants, drawWinners } from "./drawWinners.js";
 export type { DrawWinnersOptions } from "./drawWinners.js";
+export { KickChatProvider } from "./kick/KickChatProvider.js";
+export type { KickChatProviderOptions } from "./kick/KickChatProvider.js";
+export { mapKickMessage, stripKickEmotes } from "./kick/mapKickMessage.js";
+export type { KickChatMessageEvent } from "./kick/mapKickMessage.js";
 export { GiveawayEngine } from "./giveawayEngine.js";
 export type {
   EntryResult,

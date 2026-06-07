@@ -4,7 +4,12 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "bot": "node --import tsx bot.ts",
+    "demo": "node --import tsx demo.ts",
     "test": "node --import tsx --test tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "kick-wss": "^1.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
