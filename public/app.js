@@ -23,6 +23,9 @@ const els = {
   viewerSignedIn: document.getElementById("viewer-signed-in"),
   signedInViewerKick: document.getElementById("signed-in-viewer-kick"),
   viewerKickUsernameInput: document.getElementById("viewer-kick-username-input"),
+  kickOAuthLink: document.getElementById("kick-oauth-link"),
+  kickOAuthLinked: document.getElementById("kick-oauth-linked"),
+  kickOAuthLinkedName: document.getElementById("kick-oauth-linked-name"),
   viewerChatroomField: document.getElementById("viewer-chatroom-field"),
   viewerChatroomIdInput: document.getElementById("viewer-chatroom-id-input"),
   verifyViewerKickBtn: document.getElementById("verify-viewer-kick-btn"),
@@ -51,6 +54,7 @@ let dashboardState = null;
 let isSpinning = false;
 let isAdmin = false;
 let needsSetup = false;
+let kickOAuthConfigured = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -284,12 +288,29 @@ function renderViewerState(viewer) {
   els.viewerForms.classList.remove("hidden");
 }
 
+function renderPendingKickLink(pending) {
+  if (!pending) {
+    els.kickOAuthLinked.classList.add("hidden");
+    els.viewerKickUsernameInput.readOnly = false;
+    return;
+  }
+
+  els.kickOAuthLinked.classList.remove("hidden");
+  els.kickOAuthLinkedName.textContent = pending.slug;
+  els.viewerKickUsernameInput.value = pending.slug;
+  els.viewerKickUsernameInput.readOnly = true;
+  els.viewerChatroomField.classList.add("hidden");
+}
+
 async function loadSession() {
   const response = await fetch("/api/auth/me");
   const result = await response.json();
   needsSetup = Boolean(result.needsSetup);
+  kickOAuthConfigured = Boolean(result.kickOAuthConfigured);
+  els.kickOAuthLink.classList.toggle("hidden", !kickOAuthConfigured);
   renderStreamerState(result.user);
   renderViewerState(result.viewer);
+  renderPendingKickLink(result.pendingKickLink);
 
   if (needsSetup) {
     openStreamerModal();
@@ -680,6 +701,17 @@ fetch("/api/state")
   .catch(() => showToast("Failed to load dashboard state"));
 
 loadSession().catch(() => showToast("Failed to load account status"));
+
+const kickOAuthStatus = new URLSearchParams(window.location.search).get("kick_oauth");
+if (kickOAuthStatus === "linked") {
+  showToast("Kick account linked — set a password to finish signup");
+  setViewerTab("signup");
+  history.replaceState({}, "", window.location.pathname);
+} else if (kickOAuthStatus === "failed") {
+  showToast("Kick account linking failed");
+  history.replaceState({}, "", window.location.pathname);
+}
+
 setViewerTab("signup");
 setStreamerTab("signup");
 updateAdminControls();

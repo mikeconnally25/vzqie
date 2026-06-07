@@ -167,11 +167,18 @@
                 />
               </label>
               <div class="auth-form-actions">
+                <a id="kick-oauth-link" class="btn btn-secondary hidden" href="/api/kick/oauth/start">
+                  Link with Kick
+                </a>
                 <button id="verify-viewer-kick-btn" class="btn btn-secondary" type="button">
                   Verify Kick account
                 </button>
                 <button class="btn btn-primary" type="submit">Create viewer account</button>
               </div>
+              <p id="kick-oauth-linked" class="linked-kick hidden">
+                Kick account linked:
+                <strong id="kick-oauth-linked-name">—</strong>
+              </p>
             </form>
 
             <form id="viewer-login-form" class="auth-form hidden">

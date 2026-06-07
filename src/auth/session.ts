@@ -5,6 +5,16 @@ declare module "express-session" {
   interface SessionData {
     userId?: string;
     viewerId?: string;
+    kickOAuthCodeVerifier?: string;
+    kickOAuthState?: string;
+    pendingKickLink?: {
+      slug: string;
+      kickUserId: number;
+      kickChatroomId: number;
+      accessToken: string;
+      refreshToken?: string;
+      expiresAt: number;
+    };
   }
 }
 

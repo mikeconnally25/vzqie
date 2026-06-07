@@ -2,6 +2,10 @@ export interface ViewerRecord {
   id: string;
   kickUsername: string;
   kickChatroomId: number;
+  kickUserId?: number;
+  kickAccessToken?: string;
+  kickRefreshToken?: string;
+  kickTokenExpiresAt?: string;
   email?: string;
   passwordHash: string;
   createdAt: string;
@@ -20,6 +24,10 @@ export interface ViewerSignupInput {
   password: string;
   email?: string;
   kickChatroomId?: number;
+  kickUserId?: number;
+  kickAccessToken?: string;
+  kickRefreshToken?: string;
+  kickTokenExpiresAt?: string;
 }
 
 export interface ViewerLoginInput {

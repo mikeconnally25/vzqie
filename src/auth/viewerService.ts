@@ -50,6 +50,10 @@ export class ViewerService {
       {
         kickUsername: normalizeKickSlug(resolvedKick.slug),
         kickChatroomId: resolvedKick.chatroomId,
+        kickUserId: input.kickUserId,
+        kickAccessToken: input.kickAccessToken,
+        kickRefreshToken: input.kickRefreshToken,
+        kickTokenExpiresAt: input.kickTokenExpiresAt,
         email: input.email,
       },
       passwordHash
@@ -88,6 +92,17 @@ export class ViewerService {
   private async resolveKickAccount(
     input: ViewerSignupInput
   ): Promise<KickChannelInfo> {
+    if (
+      input.kickAccessToken &&
+      input.kickUserId !== undefined &&
+      input.kickChatroomId !== undefined
+    ) {
+      return {
+        slug: normalizeKickSlug(input.kickUsername),
+        chatroomId: input.kickChatroomId,
+      };
+    }
+
     if (input.kickChatroomId !== undefined) {
       const chatroomError = validateChatroomId(input.kickChatroomId);
       if (chatroomError) {

@@ -109,15 +109,19 @@ describe("ViewerService", () => {
     assert.equal(viewer.kickChatroomId, 282833);
   });
 
-  it("creates a viewer account with a manual chatroom id", async () => {
+  it("creates a viewer account with OAuth credentials", async () => {
     const viewer = await viewers.signup({
-      kickUsername: "viewer_two",
+      kickUsername: "oauth_viewer",
       password: "password123",
-      kickChatroomId: 999001,
+      kickChatroomId: 424242,
+      kickUserId: 777,
+      kickAccessToken: "access-token",
+      kickRefreshToken: "refresh-token",
+      kickTokenExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
     });
 
-    assert.equal(viewer.kickUsername, "viewer_two");
-    assert.equal(viewer.kickChatroomId, 999001);
+    assert.equal(viewer.kickUsername, "oauth_viewer");
+    assert.equal(viewer.kickChatroomId, 424242);
   });
 
   it("rejects duplicate Kick accounts", async () => {

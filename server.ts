@@ -1,5 +1,6 @@
 import express from "express";
 import session from "express-session";
+import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import path from "node:path";
@@ -9,6 +10,12 @@ import { AuthService } from "./src/auth/authService.js";
 import { createRequireAuth } from "./src/auth/session.js";
 import { ViewerService } from "./src/auth/viewerService.js";
 import { lookupKickChannel } from "./src/kick/kickChannelLookup.js";
+import {
+  exchangeKickOAuthCode,
+  isKickOAuthConfigured,
+  resolveKickOAuthProfile,
+  startKickOAuth,
+} from "./src/kick/kickOAuth.js";
 import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
 
 loadEnvFile();
@@ -81,6 +88,14 @@ app.get("/api/auth/me", async (req, res) => {
     user,
     viewer,
     needsSetup: adminCount === 0,
+    kickOAuthConfigured: isKickOAuthConfigured(),
+    pendingKickLink: req.session.pendingKickLink
+      ? {
+          slug: req.session.pendingKickLink.slug,
+          kickUserId: req.session.pendingKickLink.kickUserId,
+          kickChatroomId: req.session.pendingKickLink.kickChatroomId,
+        }
+      : null,
   });
 });
 
@@ -101,6 +116,74 @@ app.get("/api/kick/lookup", async (req, res) => {
     });
   }
 });
+
+async function handleKickOAuthCallback(
+  req: express.Request,
+  res: express.Response
+): Promise<void> {
+  if (!isKickOAuthConfigured()) {
+    res.status(503).send("Kick OAuth is not configured.");
+    return;
+  }
+
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const codeVerifier = req.session.kickOAuthCodeVerifier;
+
+  if (!code || !codeVerifier) {
+    res.redirect("/?kick_oauth=failed");
+    return;
+  }
+
+  try {
+    const token = await exchangeKickOAuthCode(code, codeVerifier);
+    const profile = await resolveKickOAuthProfile(token);
+
+    req.session.pendingKickLink = {
+      slug: profile.slug,
+      kickUserId: profile.kickUserId,
+      kickChatroomId: profile.kickChatroomId,
+      accessToken: profile.accessToken,
+      refreshToken: profile.refreshToken,
+      expiresAt: profile.expiresAt,
+    };
+    delete req.session.kickOAuthCodeVerifier;
+    delete req.session.kickOAuthState;
+
+    res.redirect("/?kick_oauth=linked");
+  } catch (error) {
+    console.error("Kick OAuth callback failed:", error);
+    res.redirect("/?kick_oauth=failed");
+  }
+}
+
+app.get("/api/kick/oauth/url", (req, res) => {
+  if (!isKickOAuthConfigured()) {
+    res.status(503).json({ ok: false, error: "Kick OAuth is not configured." });
+    return;
+  }
+
+  const { authUrl, pkce } = startKickOAuth(randomUUID());
+  req.session.kickOAuthCodeVerifier = pkce.codeVerifier;
+  req.session.kickOAuthState = pkce.state;
+
+  res.json({ ok: true, authUrl });
+});
+
+app.get("/api/kick/oauth/start", (req, res) => {
+  if (!isKickOAuthConfigured()) {
+    res.status(503).send("Kick OAuth is not configured.");
+    return;
+  }
+
+  const { authUrl, pkce } = startKickOAuth(randomUUID());
+  req.session.kickOAuthCodeVerifier = pkce.codeVerifier;
+  req.session.kickOAuthState = pkce.state;
+
+  res.redirect(authUrl);
+});
+
+app.get("/api/kick/oauth/callback", handleKickOAuthCallback);
+app.get("/api/callback", handleKickOAuthCallback);
 
 app.post("/api/auth/signup", async (req, res) => {
   try {
@@ -159,26 +242,36 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.post("/api/viewers/signup", async (req, res) => {
   try {
+    const pending = req.session.pendingKickLink;
     const kickUsername =
-      typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "";
+      pending?.slug ??
+      (typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "");
     const password =
       typeof req.body?.password === "string" ? req.body.password : "";
     const email =
       typeof req.body?.email === "string" ? req.body.email : undefined;
     const kickChatroomIdRaw = req.body?.kickChatroomId;
     const kickChatroomId =
-      kickChatroomIdRaw === undefined || kickChatroomIdRaw === ""
+      pending?.kickChatroomId ??
+      (kickChatroomIdRaw === undefined || kickChatroomIdRaw === ""
         ? undefined
-        : Number(kickChatroomIdRaw);
+        : Number(kickChatroomIdRaw));
 
     const viewer = await viewerService.signup({
       kickUsername,
       password,
       email,
       kickChatroomId: Number.isFinite(kickChatroomId) ? kickChatroomId : undefined,
+      kickUserId: pending?.kickUserId,
+      kickAccessToken: pending?.accessToken,
+      kickRefreshToken: pending?.refreshToken,
+      kickTokenExpiresAt: pending
+        ? new Date(pending.expiresAt).toISOString()
+        : undefined,
     });
     req.session.viewerId = viewer.id;
     req.session.userId = undefined;
+    delete req.session.pendingKickLink;
     await service.loadRegisteredViewers();
 
     res.status(201).json({ ok: true, viewer });

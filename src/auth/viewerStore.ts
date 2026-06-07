@@ -11,6 +11,10 @@ interface ViewerDatabase {
 export interface CreateViewerInput {
   kickUsername: string;
   kickChatroomId: number;
+  kickUserId?: number;
+  kickAccessToken?: string;
+  kickRefreshToken?: string;
+  kickTokenExpiresAt?: string;
   email?: string;
 }
 
@@ -43,6 +47,13 @@ export class ViewerStore {
       throw new Error("This Kick chatroom is already linked to another viewer.");
     }
 
+    if (
+      input.kickUserId !== undefined &&
+      db.viewers.some((viewer) => viewer.kickUserId === input.kickUserId)
+    ) {
+      throw new Error("This Kick account is already registered.");
+    }
+
     const email = input.email?.trim().toLowerCase();
     if (
       email &&
@@ -55,6 +66,10 @@ export class ViewerStore {
       id: randomUUID(),
       kickUsername: kickSlug,
       kickChatroomId: input.kickChatroomId,
+      kickUserId: input.kickUserId,
+      kickAccessToken: input.kickAccessToken,
+      kickRefreshToken: input.kickRefreshToken,
+      kickTokenExpiresAt: input.kickTokenExpiresAt,
       email: email || undefined,
       passwordHash,
       createdAt: new Date().toISOString(),

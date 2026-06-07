@@ -43,6 +43,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `SESSION_SECRET` | Recommended | Session signing secret |
 | `PORT` | Optional | Web server port (default: `3000`) |
 | `KICK_DEBUG` | Optional | Set to `1` for chat debug logs |
+| `KICK_CLIENT_ID` | For OAuth | Kick developer app client ID |
+| `KICK_CLIENT_SECRET` | For OAuth | Kick developer app client secret |
+| `KICK_REDIRECT_URI` | For OAuth | OAuth callback URL |
 
 If `KICK_CHANNEL` or `KICK_CHATROOM_ID` is missing, the dashboard still runs but chat stays offline until configured.
 
@@ -55,6 +58,24 @@ Open in a browser while logged into Kick:
 Copy `chatroom.id` from the JSON response into `.env`.
 
 If Kick blocks the lookup API, enter the chatroom ID manually during viewer signup.
+
+## Viewer Kick OAuth
+
+Viewers can link their Kick account with OAuth instead of manual username lookup.
+
+1. Create a Kick developer app at https://docs.kick.com/getting-started/kick-apps-setup
+2. Add to `.env`:
+
+```env
+KICK_CLIENT_ID=your-client-id
+KICK_CLIENT_SECRET=your-client-secret
+KICK_REDIRECT_URI=http://localhost:3000/api/kick/oauth/callback
+```
+
+3. Viewers click **Link with Kick** on the signup form
+4. After Kick redirects back, they set a password to finish creating their account
+
+The callback route is also available at `/api/callback` if you prefer that redirect URI in your Kick app settings.
 
 ## Scripts
 
