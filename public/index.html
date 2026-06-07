@@ -83,16 +83,12 @@
         <section class="panel panel-wide">
           <div class="panel-header">
             <h2>Account</h2>
-            <span class="panel-hint">Link your Kick account to create an account</span>
+            <span class="panel-hint">Create an account to manage the dashboard</span>
           </div>
 
           <div id="account-signed-in" class="account-signed-in hidden">
             <div>
               <p>Signed in as <strong id="signed-in-username"></strong></p>
-              <p class="linked-kick">
-                Linked Kick:
-                <strong id="signed-in-kick">—</strong>
-              </p>
             </div>
             <button id="logout-btn" class="btn btn-secondary" type="button">Sign out</button>
           </div>
@@ -116,24 +112,7 @@
                 Password
                 <input name="password" type="password" autocomplete="new-password" required minlength="8" />
               </label>
-              <label>
-                Kick username
-                <input
-                  id="kick-username-input"
-                  name="kickUsername"
-                  type="text"
-                  placeholder="blakjac21"
-                  required
-                  minlength="2"
-                  maxlength="25"
-                />
-              </label>
-              <div class="auth-form-actions">
-                <button id="verify-kick-btn" class="btn btn-secondary" type="button">
-                  Verify Kick account
-                </button>
-                <button class="btn btn-primary" type="submit">Create account</button>
-              </div>
+              <button class="btn btn-primary" type="submit">Create account</button>
             </form>
 
             <form id="login-form" class="auth-form hidden">

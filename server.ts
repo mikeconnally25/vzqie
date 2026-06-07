@@ -5,7 +5,6 @@ import { Server } from "socket.io";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { AuthService } from "./src/auth/authService.js";
-import { lookupKickChannel } from "./src/kick/kickChannelLookup.js";
 import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -55,24 +54,6 @@ app.get("/api/auth/me", async (req, res) => {
   res.json({ user });
 });
 
-app.get("/api/kick/lookup", async (req, res) => {
-  const slug = typeof req.query.slug === "string" ? req.query.slug : "";
-  if (!slug.trim()) {
-    res.status(400).json({ ok: false, error: "Kick username is required." });
-    return;
-  }
-
-  try {
-    const channel = await lookupKickChannel(slug);
-    res.json({ ok: true, channel });
-  } catch (error) {
-    res.status(400).json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
-
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const username =
@@ -81,14 +62,11 @@ app.post("/api/auth/signup", async (req, res) => {
       typeof req.body?.password === "string" ? req.body.password : "";
     const email =
       typeof req.body?.email === "string" ? req.body.email : undefined;
-    const kickUsername =
-      typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "";
 
     const user = await authService.signup({
       username,
       password,
       email,
-      kickUsername,
     });
     req.session.userId = user.id;
 

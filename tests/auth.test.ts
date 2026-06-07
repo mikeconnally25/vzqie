@@ -11,11 +11,6 @@ import {
   validateKickSlug,
 } from "../src/kick/kickChannelLookup.js";
 
-const mockKickLookup = async (slug: string) => ({
-  slug: normalizeKickSlug(slug),
-  chatroomId: 282833,
-});
-
 describe("Kick account validation", () => {
   it("accepts valid kick slugs", () => {
     assert.equal(validateKickSlug("blakjac21"), null);
@@ -33,24 +28,22 @@ describe("AuthService", () => {
 
   before(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), "giveaway-auth-"));
-    auth = new AuthService(new UserStore(tempDir), mockKickLookup);
+    auth = new AuthService(new UserStore(tempDir));
   });
 
   after(async () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("creates a new account with a linked Kick channel", async () => {
+  it("creates a new account", async () => {
     const user = await auth.signup({
       username: "streamer1",
       password: "password123",
       email: "streamer1@example.com",
-      kickUsername: "blakjac21",
     });
 
     assert.equal(user.username, "streamer1");
-    assert.equal(user.kickUsername, "blakjac21");
-    assert.equal(user.kickChatroomId, 282833);
+    assert.equal(user.email, "streamer1@example.com");
   });
 
   it("rejects duplicate usernames", async () => {
@@ -59,21 +52,8 @@ describe("AuthService", () => {
         auth.signup({
           username: "streamer1",
           password: "anotherpass",
-          kickUsername: "otherkick",
         }),
       /already taken/
-    );
-  });
-
-  it("rejects duplicate linked Kick accounts", async () => {
-    await assert.rejects(
-      () =>
-        auth.signup({
-          username: "streamer2",
-          password: "password123",
-          kickUsername: "blakjac21",
-        }),
-      /Kick account is already linked/
     );
   });
 
@@ -84,7 +64,6 @@ describe("AuthService", () => {
     });
 
     assert.equal(user.username, "streamer1");
-    assert.equal(user.kickUsername, "blakjac21");
   });
 
   it("rejects invalid passwords", async () => {
