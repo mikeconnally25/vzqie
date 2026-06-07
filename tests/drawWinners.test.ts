@@ -14,7 +14,6 @@ function participant(
     timestamp,
     riskScore: 0,
     riskLevel: "LOW",
-    approved: true,
     ...overrides,
   };
 }

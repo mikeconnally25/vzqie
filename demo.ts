@@ -42,20 +42,7 @@ async function main(): Promise<void> {
   header("🎁 KICK GIVEAWAY — LIVE DEMO");
 
   const auditLogger = new InMemoryAuditLogger();
-  const engine = new GiveawayEngine({
-    now: () => now,
-    auditLogger,
-    onRiskUpdate: (pending) => {
-      if (pending.length === 0) return;
-      line("⚠️  Risk update pushed to stream overlay:");
-      for (const user of pending) {
-        line(
-          `     ${user.username.padEnd(12)} ${user.riskLevel.padEnd(6)} ${RISK_ICON[user.riskLevel]}  (score: ${user.riskScore})`
-        );
-      }
-      console.log();
-    },
-  });
+  const engine = new GiveawayEngine({ now: () => now, auditLogger });
 
   header("💬 Chat messages incoming");
 
@@ -82,34 +69,11 @@ async function main(): Promise<void> {
 
     if (result?.status === "blocked") {
       line(`   └─ 🚫 BLOCKED (bot blacklist)`);
-    } else if (result?.status === "pending_approval") {
-      line(`   └─ ⏸  PENDING APPROVAL  ${RISK_ICON[risk.level]} ${risk.level}`);
     } else if (result?.status === "entered") {
       line(`   └─ ✅ ENTERED  ${RISK_ICON[risk.level]} ${risk.level}`);
     }
     console.log();
   }
-
-  header("📋 Approval queue (streamer dashboard)");
-
-  const queue = engine.getApprovalQueue();
-  line("Username      Risk");
-  line("────────────────────────");
-  for (const entry of queue) {
-    const icon = RISK_ICON[entry.riskLevel];
-    line(`${entry.username.padEnd(13)} ${entry.riskLevel.padEnd(6)} ${icon}`);
-  }
-  console.log();
-
-  await sleep(600);
-  line("Streamer clicks: Reject viewer2");
-  engine.reject("viewer2");
-  line("   └─ ❌ viewer2 removed from giveaway\n");
-
-  await sleep(400);
-  line("Streamer clicks: Approve viewer3");
-  engine.approve("viewer3");
-  line("   └─ ✅ viewer3 added to draw pool\n");
 
   header("🎲 Drawing winners");
 

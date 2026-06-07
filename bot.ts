@@ -11,44 +11,6 @@ async function handleCommand(line: string): Promise<void> {
   const target = args.join(" ");
 
   switch (command?.toLowerCase()) {
-    case "approve":
-      if (!target) {
-        console.log("Usage: approve <username>");
-        return;
-      }
-      console.log(
-        service.approve(target)
-          ? `✅ Approved ${target}`
-          : `⚠️  ${target} is not in the approval queue`
-      );
-      break;
-
-    case "reject":
-      if (!target) {
-        console.log("Usage: reject <username>");
-        return;
-      }
-      console.log(
-        service.reject(target)
-          ? `❌ Rejected ${target}`
-          : `⚠️  ${target} is not in the approval queue`
-      );
-      break;
-
-    case "queue": {
-      const queue = service.getState().approvalQueue;
-      if (queue.length === 0) {
-        console.log("Approval queue is empty.");
-        return;
-      }
-      for (const entry of queue) {
-        console.log(
-          `${entry.username.padEnd(14)} ${entry.riskLevel.padEnd(6)} ${RISK_ICON[entry.riskLevel]}`
-        );
-      }
-      break;
-    }
-
     case "eligible": {
       const eligible = service.getState().eligible;
       console.log(`Eligible (${eligible.length}):`);
@@ -75,9 +37,6 @@ async function handleCommand(line: string): Promise<void> {
 
     case "help":
       console.log(`Commands:
-  approve <user>   Approve a pending high-risk entry
-  reject <user>    Reject a pending entry
-  queue            Show approval queue
   eligible         Show current draw pool
   draw [n]         Draw winner(s), default 1
   quit             Disconnect and exit`);

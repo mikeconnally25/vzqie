@@ -2,13 +2,7 @@ import { InMemoryAuditLogger } from "../audit.js";
 import { KickChatProvider } from "../kick/KickChatProvider.js";
 import { GiveawayEngine } from "../giveawayEngine.js";
 import type { EntryResult } from "../giveawayEngine.js";
-import type {
-  ApprovalQueueEntry,
-  AuditLogEntry,
-  ChatMessage,
-  Participant,
-  WinRecord,
-} from "../types.js";
+import type { AuditLogEntry, ChatMessage, Participant, WinRecord } from "../types.js";
 
 export interface GiveawayServiceConfig {
   channel: string;
@@ -30,7 +24,6 @@ export interface DashboardState {
   channel: string;
   chatConnected: boolean;
   entryKeyword: string;
-  approvalQueue: ApprovalQueueEntry[];
   eligible: Participant[];
   recentEntries: EntryLogItem[];
   auditLog: AuditLogEntry[];
@@ -59,10 +52,7 @@ export class GiveawayService {
   constructor(private readonly config: GiveawayServiceConfig) {
     this.entryKeyword = (config.entryKeyword ?? "!enter").toLowerCase();
 
-    this.engine = new GiveawayEngine({
-      auditLogger: this.auditLogger,
-      onRiskUpdate: () => this.broadcastState(),
-    });
+    this.engine = new GiveawayEngine({ auditLogger: this.auditLogger });
 
     this.chat = new KickChatProvider({
       channel: config.channel,
@@ -111,22 +101,6 @@ export class GiveawayService {
     });
   }
 
-  approve(username: string): boolean {
-    const ok = this.engine.approve(username);
-    if (ok) {
-      this.broadcastState();
-    }
-    return ok;
-  }
-
-  reject(username: string): boolean {
-    const ok = this.engine.reject(username);
-    if (ok) {
-      this.broadcastState();
-    }
-    return ok;
-  }
-
   draw(count = 1): Participant[] {
     const winners = this.engine.draw(count, this.previousWins);
 
@@ -145,9 +119,6 @@ export class GiveawayService {
       channel: this.config.channel,
       chatConnected: this.chatConnected,
       entryKeyword: this.entryKeyword,
-      approvalQueue: this.engine
-        .getApprovalQueue()
-        .filter((entry) => !entry.approved),
       eligible: this.engine.getEligibleParticipants(),
       recentEntries: [...this.recentEntries],
       auditLog: [...this.auditLogger.entries],

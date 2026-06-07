@@ -1,14 +1,13 @@
 import { allowed } from "./blacklist.js";
 import { canWin } from "./canWin.js";
-import { ALT_SCORE_THRESHOLD, PARTICIPATION_WINDOW_MS } from "./constants.js";
+import { PARTICIPATION_WINDOW_MS } from "./constants.js";
 import { drawWinners } from "./drawWinners.js";
-import { AltDetector, calculateRisk } from "./risk.js";
+import { calculateRisk } from "./risk.js";
 import type {
-  ApprovalQueueEntry,
   AuditLogger,
   ChatMessage,
   Participant,
-  RiskUpdatePayload,
+  RiskLevel,
   UserProfile,
   WinRecord,
 } from "./types.js";
@@ -16,17 +15,15 @@ import { normalizeUsername, resolveMessageTimestamp } from "./utils.js";
 
 export interface GiveawayEngineOptions {
   auditLogger?: AuditLogger;
-  onRiskUpdate?: (updates: RiskUpdatePayload[]) => void;
-  altDetector?: AltDetector;
   now?: () => number;
 }
 
-export type EntryStatus = "entered" | "pending_approval" | "rejected" | "blocked";
+export type EntryStatus = "entered" | "blocked";
 
 export interface EntryResult {
   status: EntryStatus;
   username: string;
-  riskLevel?: ApprovalQueueEntry["riskLevel"];
+  riskLevel?: RiskLevel;
 }
 
 function profileFromMessage(
@@ -41,26 +38,13 @@ function profileFromMessage(
   };
 }
 
-function requiresManualApproval(
-  riskLevel: ApprovalQueueEntry["riskLevel"],
-  altScore: number
-): boolean {
-  return riskLevel === "HIGH" || altScore >= ALT_SCORE_THRESHOLD;
-}
-
 export class GiveawayEngine {
   private readonly participants = new Map<string, Participant>();
-  private readonly approvalQueue = new Map<string, ApprovalQueueEntry>();
-  private readonly rejected = new Set<string>();
   private readonly auditLogger?: AuditLogger;
-  private readonly onRiskUpdate?: (updates: RiskUpdatePayload[]) => void;
-  private readonly altDetector: AltDetector;
   private readonly now: () => number;
 
   constructor(options: GiveawayEngineOptions = {}) {
     this.auditLogger = options.auditLogger;
-    this.onRiskUpdate = options.onRiskUpdate;
-    this.altDetector = options.altDetector ?? new AltDetector();
     this.now = options.now ?? Date.now;
   }
 
@@ -73,14 +57,8 @@ export class GiveawayEngine {
     }
 
     const normalized = normalizeUsername(message.username);
-
-    if (this.rejected.has(normalized)) {
-      return { status: "rejected", username: message.username };
-    }
-
     const userProfile = profileFromMessage(message, profile);
     const risk = calculateRisk(userProfile);
-    const altScore = this.altDetector.evaluate(userProfile);
     const timestamp = resolveMessageTimestamp(message.timestamp, this.now());
 
     const participant: Participant = {
@@ -89,45 +67,14 @@ export class GiveawayEngine {
       timestamp,
       riskScore: risk.score,
       riskLevel: risk.level,
-      approved: risk.level !== "HIGH",
       isSubscriber: message.isSubscriber,
       isFollower: message.isFollower,
     };
 
-    if (requiresManualApproval(risk.level, altScore)) {
-      const existing = this.approvalQueue.get(normalized);
-      const entry: ApprovalQueueEntry = {
-        username: message.username,
-        riskScore: risk.score,
-        riskLevel: risk.level,
-        approved: existing?.approved ?? false,
-        participant,
-      };
-
-      this.approvalQueue.set(normalized, entry);
-
-      if (!entry.approved) {
-        void this.auditLogger?.log({
-          action: "ENTRY_PENDING",
-          username: message.username,
-          metadata: { riskScore: risk.score, riskLevel: risk.level, altScore },
-        });
-
-        this.emitRiskUpdates();
-        return {
-          status: "pending_approval",
-          username: message.username,
-          riskLevel: risk.level,
-        };
-      }
-
-      participant.approved = true;
-    }
-
     this.participants.set(normalized, participant);
 
     void this.auditLogger?.log({
-      action: "ENTRY_APPROVED",
+      action: "ENTRY",
       username: message.username,
       metadata: { riskScore: risk.score, riskLevel: risk.level },
     });
@@ -135,77 +82,12 @@ export class GiveawayEngine {
     return { status: "entered", username: message.username, riskLevel: risk.level };
   }
 
-  approve(username: string): boolean {
-    const normalized = normalizeUsername(username);
-    const entry = this.approvalQueue.get(normalized);
-
-    if (!entry) {
-      return false;
-    }
-
-    entry.approved = true;
-    this.rejected.delete(normalized);
-
-    if (entry.participant) {
-      entry.participant.approved = true;
-      this.participants.set(normalized, entry.participant);
-    } else {
-      const participant = this.participants.get(normalized);
-      if (participant) {
-        participant.approved = true;
-      }
-    }
-
-    void this.auditLogger?.log({
-      action: "ENTRY_APPROVED",
-      username: entry.username,
-      metadata: { riskScore: entry.riskScore, riskLevel: entry.riskLevel },
-    });
-
-    this.emitRiskUpdates();
-    return true;
-  }
-
-  reject(username: string): boolean {
-    const normalized = normalizeUsername(username);
-    const entry = this.approvalQueue.get(normalized);
-
-    if (!entry) {
-      return false;
-    }
-
-    this.rejected.add(normalized);
-    this.participants.delete(normalized);
-    this.approvalQueue.delete(normalized);
-
-    void this.auditLogger?.log({
-      action: "ENTRY_REJECTED",
-      username: entry.username,
-      metadata: { riskScore: entry.riskScore, riskLevel: entry.riskLevel },
-    });
-
-    this.emitRiskUpdates();
-    return true;
-  }
-
-  getApprovalQueue(): ApprovalQueueEntry[] {
-    return [...this.approvalQueue.values()];
-  }
-
   getEligibleParticipants(referenceTime = this.now()): Participant[] {
     const cutoff = referenceTime - PARTICIPATION_WINDOW_MS;
 
-    return [...this.participants.values()].filter((participant) => {
-      if (participant.timestamp <= cutoff) {
-        return false;
-      }
-
-      if (participant.riskLevel === "HIGH" && !participant.approved) {
-        return false;
-      }
-
-      return true;
-    });
+    return [...this.participants.values()].filter(
+      (participant) => participant.timestamp > cutoff
+    );
   }
 
   draw(
@@ -228,21 +110,5 @@ export class GiveawayEngine {
     }
 
     return winners;
-  }
-
-  private emitRiskUpdates(): void {
-    if (!this.onRiskUpdate) {
-      return;
-    }
-
-    const updates: RiskUpdatePayload[] = this.getApprovalQueue()
-      .filter((entry) => !entry.approved)
-      .map((entry) => ({
-        username: entry.username,
-        riskLevel: entry.riskLevel,
-        riskScore: entry.riskScore,
-      }));
-
-    this.onRiskUpdate(updates);
   }
 }

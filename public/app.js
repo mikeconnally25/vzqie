@@ -7,11 +7,9 @@ const els = {
   drawBtn: document.getElementById("draw-btn"),
   drawCount: document.getElementById("draw-count"),
   statEligible: document.getElementById("stat-eligible"),
-  statPending: document.getElementById("stat-pending"),
   statEntries: document.getElementById("stat-entries"),
   statWinners: document.getElementById("stat-winners"),
   entries: document.getElementById("entries-list"),
-  queue: document.getElementById("queue-list"),
   eligible: document.getElementById("eligible-list"),
   winners: document.getElementById("winners-list"),
   audit: document.getElementById("audit-list"),
@@ -27,8 +25,6 @@ function riskBadge(level) {
 function statusLabel(status) {
   return {
     entered: "Entered",
-    pending_approval: "Pending",
-    rejected: "Rejected",
     blocked: "Blocked",
   }[status] ?? status;
 }
@@ -38,11 +34,6 @@ function showToast(message) {
   els.toast.classList.remove("hidden");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => els.toast.classList.add("hidden"), 2600);
-}
-
-async function post(url) {
-  const response = await fetch(url, { method: "POST" });
-  return response.json();
 }
 
 function renderList(container, items, renderItem, emptyText) {
@@ -60,7 +51,6 @@ function renderState(state) {
   els.channel.textContent = state.channel;
   els.keyword.textContent = state.entryKeyword;
   els.statEligible.textContent = state.eligible.length;
-  els.statPending.textContent = state.approvalQueue.length;
   els.statEntries.textContent = state.recentEntries.length;
   els.statWinners.textContent = state.winners.length;
 
@@ -83,25 +73,6 @@ function renderState(state) {
       </article>
     `,
     "Waiting for chat entries…"
-  );
-
-  renderList(
-    els.queue,
-    state.approvalQueue,
-    (entry) => `
-      <article class="row">
-        <div class="row-main">
-          <div class="row-title">${entry.username}</div>
-          <div class="row-meta">Risk score ${entry.riskScore}</div>
-        </div>
-        <div class="row-actions">
-          ${riskBadge(entry.riskLevel)}
-          <button class="btn btn-secondary" data-approve="${entry.username}">Approve</button>
-          <button class="btn btn-danger" data-reject="${entry.username}">Reject</button>
-        </div>
-      </article>
-    `,
-    "No pending approvals"
   );
 
   renderList(
@@ -147,23 +118,6 @@ function renderState(state) {
     "No events yet"
   );
 }
-
-document.body.addEventListener("click", async (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-
-  if (target.dataset.approve) {
-    const result = await post(`/api/approve/${encodeURIComponent(target.dataset.approve)}`);
-    showToast(result.ok ? `Approved ${target.dataset.approve}` : "Approve failed");
-    if (result.state) renderState(result.state);
-  }
-
-  if (target.dataset.reject) {
-    const result = await post(`/api/reject/${encodeURIComponent(target.dataset.reject)}`);
-    showToast(result.ok ? `Rejected ${target.dataset.reject}` : "Reject failed");
-    if (result.state) renderState(result.state);
-  }
-});
 
 els.drawBtn.addEventListener("click", async () => {
   const count = Number(els.drawCount.value) || 1;

@@ -29,7 +29,6 @@ export type {
 } from "./giveawayEngine.js";
 export { AltDetector, calculateRisk } from "./risk.js";
 export type {
-  ApprovalQueueEntry,
   AuditAction,
   AuditLogEntry,
   AuditLogger,
@@ -38,7 +37,6 @@ export type {
   Participant,
   RiskLevel,
   RiskResult,
-  RiskUpdatePayload,
   UserProfile,
   WinRecord,
 } from "./types.js";

@@ -25,16 +25,6 @@ app.get("/api/state", (_req, res) => {
   res.json(service.getState());
 });
 
-app.post("/api/approve/:username", (req, res) => {
-  const ok = service.approve(req.params.username);
-  res.json({ ok, state: service.getState() });
-});
-
-app.post("/api/reject/:username", (req, res) => {
-  const ok = service.reject(req.params.username);
-  res.json({ ok, state: service.getState() });
-});
-
 app.post("/api/draw", (req, res) => {
   const count = Number(req.body?.count ?? 1);
   const winners = service.draw(Number.isFinite(count) ? count : 1);
