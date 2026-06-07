@@ -1,1 +1,170 @@
+export interface ChatProvider {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
 
+  onMessage(
+    callback: (message: ChatMessage) => void
+  ): void;
+}
+export interface ChatMessage {
+  username: string;
+  message: string;
+  timestamp: number;
+
+  isSubscriber?: boolean;
+  isFollower?: boolean;
+  accountAgeDays?: number;
+}class GiveawayEngine {
+  private participants = new Map();
+
+  addMessage(message: ChatMessage) {
+    this.participants.set(message.username, {
+      username: message.username,
+      timestamp: Date.now()
+    });
+  }
+
+  getEligibleParticipants() {
+    const cutoff =
+      Date.now() - 180000;
+
+    return [...this.participants.values()]
+      .filter(p => p.timestamp > cutoff);
+  }
+}export interface RiskResult {
+  score: number;
+  level: "LOW" | "MEDIUM" | "HIGH";
+}export function calculateRisk(
+  user: UserProfile
+): RiskResult {
+
+  let score = 0;
+
+  if (user.accountAgeDays < 30)
+    score += 25;
+
+  if (user.followAgeDays < 7)
+    score += 20;
+
+  if (user.messageCount < 3)
+    score += 15;
+
+  if (score >= 60)
+    return { score, level: "HIGH" };
+
+  if (score >= 30)
+    return { score, level: "MEDIUM" };
+
+  return { score, level: "LOW" };
+}class AltDetector {
+
+  evaluate(user: UserProfile) {
+
+    let score = 0;
+
+    if (user.accountAgeDays < 7)
+      score += 40;
+
+    if (user.messageCount < 5)
+      score += 20;
+
+    if (user.followAgeDays < 1)
+      score += 30;
+
+    return score;
+  }
+
+}export function drawWinners(
+  users: Participant[],
+  count: number
+) {
+
+  const winners = [];
+  const pool = [...users];
+
+  while (
+    winners.length < count &&
+    pool.length
+  ) {
+
+    const index =
+      Math.floor(
+        Math.random() * pool.length
+      );
+
+    winners.push(
+      pool.splice(index, 1)[0]
+    );
+  }
+
+  return winners;
+}function canWin(
+  user: string,
+  previousWins: WinRecord[]
+) {
+
+  const lastWin =
+    previousWins.find(
+      w => w.username === user
+    );
+
+  if (!lastWin)
+    return true;
+
+  const daysSince =
+    Date.now() - lastWin.timestamp;
+
+  return daysSince >
+    1000 * 60 * 60 * 24 * 30;
+}function canWin(
+  user: string,
+  previousWins: WinRecord[]
+) {
+
+  const lastWin =
+    previousWins.find(
+      w => w.username === user
+    );
+
+  if (!lastWin)
+    return true;
+
+  const daysSince =
+    Date.now() - lastWin.timestamp;
+
+  return daysSince >
+    1000 * 60 * 60 * 24 * 30;
+}const blacklist = new Set([
+  "Nightbot",
+  "StreamElements"
+]);
+
+function allowed(username: string) {
+  return !blacklist.has(username);
+}CREATE TABLE audit_log (
+  id INTEGER PRIMARY KEY,
+  action TEXT NOT NULL,
+  username TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);await db.audit.create({
+  action: "ENTRY_APPROVED",
+  username: "viewer123"
+});export interface ApprovalQueue {
+  username: string;
+  riskScore: number;
+  approved: boolean;
+}Username      Risk
+
+viewer1       LOW
+viewer2       HIGH
+viewer3       MEDIUM
+
+Approve
+Reject
+io.emit(
+  "risk_update",
+  suspiciousUsers
+);
+LOW      🟢
+MEDIUM   🟡
+HIGH     🔴
