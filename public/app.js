@@ -1,9 +1,16 @@
 const socket = io();
 
 const els = {
-  channel: document.getElementById("channel-name"),
   keywordEnabled: document.getElementById("keyword-enabled"),
   keywordInput: document.getElementById("keyword-input"),
+  accountPill: document.getElementById("account-pill"),
+  accountForms: document.getElementById("account-forms"),
+  accountSignedIn: document.getElementById("account-signed-in"),
+  signedInUsername: document.getElementById("signed-in-username"),
+  signupForm: document.getElementById("signup-form"),
+  loginForm: document.getElementById("login-form"),
+  logoutBtn: document.getElementById("logout-btn"),
+  authTabs: document.querySelectorAll(".auth-tab"),
   connection: document.getElementById("connection-pill"),
   drawBtn: document.getElementById("draw-btn"),
   drawCount: document.getElementById("draw-count"),
@@ -45,6 +52,58 @@ function renderList(container, items, renderItem, emptyText) {
 
   container.className = "list";
   container.innerHTML = items.map(renderItem).join("");
+}
+
+async function loadCurrentUser() {
+  const response = await fetch("/api/auth/me");
+  const result = await response.json();
+  renderAuthState(result.user);
+}
+
+function renderAuthState(user) {
+  if (user) {
+    els.accountPill.textContent = user.username;
+    els.accountPill.classList.remove("hidden");
+    els.signedInUsername.textContent = user.username;
+    els.accountSignedIn.classList.remove("hidden");
+    els.accountForms.classList.add("hidden");
+    return;
+  }
+
+  els.accountPill.classList.add("hidden");
+  els.accountSignedIn.classList.add("hidden");
+  els.accountForms.classList.remove("hidden");
+}
+
+function setAuthTab(tab) {
+  for (const button of els.authTabs) {
+    button.classList.toggle("active", button.dataset.tab === tab);
+  }
+
+  els.signupForm.classList.toggle("hidden", tab !== "signup");
+  els.loginForm.classList.toggle("hidden", tab !== "login");
+}
+
+async function submitAuthForm(url, form) {
+  const data = new FormData(form);
+  const body = Object.fromEntries(data.entries());
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Account request failed");
+    return;
+  }
+
+  form.reset();
+  renderAuthState(result.user);
+  showToast(`Welcome, ${result.user.username}`);
 }
 
 function syncKeywordControls(state) {
@@ -159,6 +218,34 @@ els.keywordInput.addEventListener("keydown", (event) => {
   }
 });
 
+for (const button of els.authTabs) {
+  button.addEventListener("click", () => setAuthTab(button.dataset.tab));
+}
+
+els.signupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitAuthForm("/api/auth/signup", els.signupForm);
+});
+
+els.loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitAuthForm("/api/auth/login", els.loginForm);
+});
+
+els.logoutBtn.addEventListener("click", async () => {
+  const response = await fetch("/api/auth/logout", { method: "POST" });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast("Could not sign out");
+    return;
+  }
+
+  renderAuthState(null);
+  setAuthTab("login");
+  showToast("Signed out");
+});
+
 els.drawBtn.addEventListener("click", async () => {
   const count = Number(els.drawCount.value) || 1;
   const response = await fetch("/api/draw", {
@@ -194,3 +281,6 @@ fetch("/api/state")
   .then((response) => response.json())
   .then(renderState)
   .catch(() => showToast("Failed to load dashboard state"));
+
+loadCurrentUser().catch(() => showToast("Failed to load account status"));
+setAuthTab("signup");

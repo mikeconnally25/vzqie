@@ -199,6 +199,88 @@ h1 {
   border-color: rgba(255, 93, 93, 0.35);
 }
 
+.pill-account {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.account-forms,
+.account-signed-in {
+  padding: 0 18px 18px;
+}
+
+.account-signed-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-tabs {
+  display: inline-flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  background: var(--kick-dim);
+  color: var(--kick);
+}
+
+.auth-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.auth-form input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.auth-form input:focus {
+  outline: 2px solid rgba(83, 252, 24, 0.35);
+  border-color: rgba(83, 252, 24, 0.45);
+}
+
+.optional {
+  font-weight: 400;
+}
+
 .btn {
   border: 0;
   border-radius: 12px;
@@ -421,7 +503,8 @@ h1 {
 @media (max-width: 960px) {
   .stats,
   .grid,
-  .split {
+  .split,
+  .auth-form {
     grid-template-columns: 1fr;
   }
 

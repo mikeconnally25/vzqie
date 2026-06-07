@@ -1,24 +1,109 @@
 import express from "express";
+import session from "express-session";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { AuthService } from "./src/auth/authService.js";
 import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 3000);
+const sessionSecret =
+  process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production";
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 app.use(express.json());
+app.use(
+  session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  })
+);
 app.use(express.static(path.join(__dirname, "public")));
 
+const authService = new AuthService();
 const service = new GiveawayService(loadGiveawayConfig());
 
 service.onEvent((event) => {
   io.emit(event.type, event.payload);
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  if (!req.session.userId) {
+    res.json({ user: null });
+    return;
+  }
+
+  const user = await authService.getUserById(req.session.userId);
+  if (!user) {
+    req.session.userId = undefined;
+    res.json({ user: null });
+    return;
+  }
+
+  res.json({ user });
+});
+
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const username =
+      typeof req.body?.username === "string" ? req.body.username : "";
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+    const email =
+      typeof req.body?.email === "string" ? req.body.email : undefined;
+
+    const user = await authService.signup({ username, password, email });
+    req.session.userId = user.id;
+
+    res.status(201).json({ ok: true, user });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const username =
+      typeof req.body?.username === "string" ? req.body.username : "";
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+
+    const user = await authService.login({ username, password });
+    req.session.userId = user.id;
+
+    res.json({ ok: true, user });
+  } catch (error) {
+    res.status(401).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      res.status(500).json({ ok: false, error: "Could not sign out." });
+      return;
+    }
+
+    res.clearCookie("connect.sid");
+    res.json({ ok: true });
+  });
 });
 
 app.get("/api/state", (_req, res) => {

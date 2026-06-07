@@ -40,6 +40,7 @@
           </div>
         </div>
         <div class="header-actions">
+          <div id="account-pill" class="pill pill-account hidden">Guest</div>
           <div id="connection-pill" class="pill pill-offline">Offline</div>
           <button id="draw-btn" class="btn btn-primary">Draw Winner</button>
         </div>
@@ -77,6 +78,53 @@
             <span class="panel-hint">Eligible participants right now</span>
           </div>
           <div id="eligible-list" class="list empty-state">No eligible viewers yet</div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Account</h2>
+            <span class="panel-hint">Create an account or sign in to save your settings</span>
+          </div>
+
+          <div id="account-signed-in" class="account-signed-in hidden">
+            <p>Signed in as <strong id="signed-in-username"></strong></p>
+            <button id="logout-btn" class="btn btn-secondary" type="button">Sign out</button>
+          </div>
+
+          <div id="account-forms" class="account-forms">
+            <div class="auth-tabs">
+              <button class="auth-tab active" type="button" data-tab="signup">Create account</button>
+              <button class="auth-tab" type="button" data-tab="login">Sign in</button>
+            </div>
+
+            <form id="signup-form" class="auth-form">
+              <label>
+                Username
+                <input name="username" type="text" autocomplete="username" required minlength="3" maxlength="24" />
+              </label>
+              <label>
+                Email <span class="optional">(optional)</span>
+                <input name="email" type="email" autocomplete="email" />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="new-password" required minlength="8" />
+              </label>
+              <button class="btn btn-primary" type="submit">Create account</button>
+            </form>
+
+            <form id="login-form" class="auth-form hidden">
+              <label>
+                Username
+                <input name="username" type="text" autocomplete="username" required />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required />
+              </label>
+              <button class="btn btn-primary" type="submit">Sign in</button>
+            </form>
+          </div>
         </section>
 
         <section class="panel panel-wide">
