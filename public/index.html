@@ -80,52 +80,22 @@
           <div id="eligible-list" class="list empty-state">No eligible viewers yet</div>
         </section>
 
-        <section class="panel panel-wide">
+        <section class="panel panel-wide wheel-panel" id="wheel-panel">
           <div class="panel-header">
-            <h2>Account</h2>
-            <span class="panel-hint">Create an account to manage the dashboard</span>
+            <h2>Winner draw</h2>
+            <span class="panel-hint">Click Draw Winner to spin the reel</span>
           </div>
 
-          <div id="account-signed-in" class="account-signed-in hidden">
-            <div>
-              <p>Signed in as <strong id="signed-in-username"></strong></p>
+          <div class="wheel-stage">
+            <div class="wheel-viewport" id="wheel-viewport">
+              <div class="wheel-pointer" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-left" aria-hidden="true"></div>
+              <div class="wheel-fade wheel-fade-right" aria-hidden="true"></div>
+              <div class="wheel-track" id="wheel-track">
+                <div class="wheel-item wheel-item-placeholder">Waiting for entries…</div>
+              </div>
             </div>
-            <button id="logout-btn" class="btn btn-secondary" type="button">Sign out</button>
-          </div>
-
-          <div id="account-forms" class="account-forms">
-            <div class="auth-tabs">
-              <button class="auth-tab active" type="button" data-tab="signup">Create account</button>
-              <button class="auth-tab" type="button" data-tab="login">Sign in</button>
-            </div>
-
-            <form id="signup-form" class="auth-form auth-form-signup">
-              <label>
-                Username
-                <input name="username" type="text" autocomplete="username" required minlength="3" maxlength="24" />
-              </label>
-              <label>
-                Email <span class="optional">(optional)</span>
-                <input name="email" type="email" autocomplete="email" />
-              </label>
-              <label>
-                Password
-                <input name="password" type="password" autocomplete="new-password" required minlength="8" />
-              </label>
-              <button class="btn btn-primary" type="submit">Create account</button>
-            </form>
-
-            <form id="login-form" class="auth-form hidden">
-              <label>
-                Username
-                <input name="username" type="text" autocomplete="username" required />
-              </label>
-              <label>
-                Password
-                <input name="password" type="password" autocomplete="current-password" required />
-              </label>
-              <button class="btn btn-primary" type="submit">Sign in</button>
-            </form>
+            <p id="wheel-result" class="wheel-result hidden"></p>
           </div>
         </section>
 

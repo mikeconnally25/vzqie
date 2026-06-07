@@ -1,16 +1,12 @@
 const socket = io();
 
+const WHEEL_ITEM_WIDTH = 166;
+const WHEEL_SPIN_MS = 5200;
+
 const els = {
   keywordEnabled: document.getElementById("keyword-enabled"),
   keywordInput: document.getElementById("keyword-input"),
   accountPill: document.getElementById("account-pill"),
-  accountForms: document.getElementById("account-forms"),
-  accountSignedIn: document.getElementById("account-signed-in"),
-  signedInUsername: document.getElementById("signed-in-username"),
-  signupForm: document.getElementById("signup-form"),
-  loginForm: document.getElementById("login-form"),
-  logoutBtn: document.getElementById("logout-btn"),
-  authTabs: document.querySelectorAll("[data-tab]"),
   viewerForms: document.getElementById("viewer-forms"),
   viewerSignedIn: document.getElementById("viewer-signed-in"),
   signedInViewerKick: document.getElementById("signed-in-viewer-kick"),
@@ -20,6 +16,10 @@ const els = {
   viewerLoginForm: document.getElementById("viewer-login-form"),
   viewerLogoutBtn: document.getElementById("viewer-logout-btn"),
   viewerTabs: document.querySelectorAll("[data-viewer-tab]"),
+  wheelPanel: document.getElementById("wheel-panel"),
+  wheelViewport: document.getElementById("wheel-viewport"),
+  wheelTrack: document.getElementById("wheel-track"),
+  wheelResult: document.getElementById("wheel-result"),
   connection: document.getElementById("connection-pill"),
   drawBtn: document.getElementById("draw-btn"),
   drawCount: document.getElementById("draw-count"),
@@ -31,6 +31,17 @@ const els = {
   winners: document.getElementById("winners-list"),
   toast: document.getElementById("toast"),
 };
+
+let dashboardState = null;
+let isSpinning = false;
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
 
 function riskBadge(level) {
   if (!level) return "";
@@ -63,30 +74,126 @@ function renderList(container, items, renderItem, emptyText) {
   container.innerHTML = items.map(renderItem).join("");
 }
 
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function nextFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+function randomRarityClass() {
+  const roll = Math.random();
+  if (roll > 0.92) return "wheel-item-legendary";
+  if (roll > 0.78) return "wheel-item-epic";
+  return "wheel-item-rare";
+}
+
+function buildReelItems(usernames, winnerUsername) {
+  const pool = usernames.length ? usernames : [winnerUsername];
+  const totalTiles = 58 + Math.floor(Math.random() * 12);
+  const winnerIndex = totalTiles - 7 - Math.floor(Math.random() * 4);
+  const tiles = [];
+
+  for (let i = 0; i < totalTiles; i += 1) {
+    tiles.push({
+      username: i === winnerIndex ? winnerUsername : pool[Math.floor(Math.random() * pool.length)],
+      isWinner: i === winnerIndex,
+      rarity: i === winnerIndex ? "wheel-item-legendary" : randomRarityClass(),
+    });
+  }
+
+  return { tiles, winnerIndex };
+}
+
+function renderWheelIdle(eligible) {
+  if (isSpinning) {
+    return;
+  }
+
+  els.wheelPanel.classList.remove("wheel-won");
+  els.wheelResult.classList.add("hidden");
+  els.wheelResult.textContent = "";
+
+  if (!eligible.length) {
+    els.wheelTrack.style.transition = "none";
+    els.wheelTrack.style.transform = "translateX(0)";
+    els.wheelTrack.innerHTML =
+      '<div class="wheel-item wheel-item-placeholder">Waiting for eligible entries…</div>';
+    return;
+  }
+
+  const preview = [];
+  for (let i = 0; i < 12; i += 1) {
+    preview.push({
+      username: eligible[i % eligible.length].username,
+      isWinner: false,
+      rarity: randomRarityClass(),
+    });
+  }
+
+  els.wheelTrack.style.transition = "none";
+  els.wheelTrack.style.transform = "translateX(0)";
+  els.wheelTrack.innerHTML = preview
+    .map(
+      (tile) => `
+        <div class="wheel-item ${tile.rarity}">
+          ${escapeHtml(tile.username)}
+        </div>
+      `
+    )
+    .join("");
+}
+
+async function spinWheel(usernames, winnerUsername) {
+  const { tiles, winnerIndex } = buildReelItems(usernames, winnerUsername);
+
+  els.wheelPanel.classList.remove("wheel-won");
+  els.wheelPanel.classList.add("wheel-spinning");
+  els.wheelResult.classList.add("hidden");
+  els.wheelResult.textContent = "";
+
+  els.wheelTrack.innerHTML = tiles
+    .map(
+      (tile) => `
+        <div class="wheel-item ${tile.rarity}${tile.isWinner ? " wheel-item-winner" : ""}">
+          ${escapeHtml(tile.username)}
+        </div>
+      `
+    )
+    .join("");
+
+  await nextFrame();
+
+  const offset =
+    winnerIndex * WHEEL_ITEM_WIDTH -
+    els.wheelViewport.offsetWidth / 2 +
+    WHEEL_ITEM_WIDTH / 2;
+
+  els.wheelTrack.style.transition = "none";
+  els.wheelTrack.style.transform = "translateX(0)";
+
+  await nextFrame();
+
+  els.wheelTrack.style.transition = `transform ${WHEEL_SPIN_MS}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+  els.wheelTrack.style.transform = `translateX(-${offset}px)`;
+
+  await wait(WHEEL_SPIN_MS + 120);
+
+  els.wheelPanel.classList.remove("wheel-spinning");
+  els.wheelPanel.classList.add("wheel-won");
+  els.wheelResult.classList.remove("hidden");
+  els.wheelResult.textContent = `🏆 ${winnerUsername} wins!`;
+}
+
 async function loadCurrentUser() {
   const response = await fetch("/api/auth/me");
   const result = await response.json();
-  renderAuthState(result.user);
   renderViewerState(result.viewer);
-}
-
-function renderAuthState(user) {
-  if (user) {
-    els.accountPill.textContent = user.username;
-    els.accountPill.classList.remove("hidden");
-    els.signedInUsername.textContent = user.username;
-    els.accountSignedIn.classList.remove("hidden");
-    els.accountForms.classList.add("hidden");
-    return;
-  }
-
-  if (!els.viewerSignedIn.classList.contains("hidden")) {
-    return;
-  }
-
-  els.accountPill.classList.add("hidden");
-  els.accountSignedIn.classList.add("hidden");
-  els.accountForms.classList.remove("hidden");
 }
 
 function renderViewerState(viewer) {
@@ -96,26 +203,12 @@ function renderViewerState(viewer) {
     els.signedInViewerKick.textContent = `${viewer.kickUsername} (${viewer.kickChatroomId})`;
     els.viewerSignedIn.classList.remove("hidden");
     els.viewerForms.classList.add("hidden");
-    els.accountSignedIn.classList.add("hidden");
-    els.accountForms.classList.add("hidden");
     return;
   }
 
-  if (!els.accountSignedIn.classList.contains("hidden")) {
-    return;
-  }
-
+  els.accountPill.classList.add("hidden");
   els.viewerSignedIn.classList.add("hidden");
   els.viewerForms.classList.remove("hidden");
-}
-
-function setAuthTab(tab) {
-  for (const button of els.authTabs) {
-    button.classList.toggle("active", button.dataset.tab === tab);
-  }
-
-  els.signupForm.classList.toggle("hidden", tab !== "signup");
-  els.loginForm.classList.toggle("hidden", tab !== "login");
 }
 
 function setViewerTab(tab) {
@@ -145,32 +238,8 @@ async function submitViewerForm(url, form) {
   }
 
   form.reset();
-  renderAuthState(null);
   renderViewerState(result.viewer);
   showToast(`Linked Kick account: ${result.viewer.kickUsername}`);
-}
-
-async function submitAuthForm(url, form) {
-  const data = new FormData(form);
-  const body = Object.fromEntries(data.entries());
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const result = await response.json();
-
-  if (!response.ok || !result.ok) {
-    showToast(result.error ?? "Account request failed");
-    return;
-  }
-
-  form.reset();
-  renderViewerState(null);
-  renderAuthState(result.user);
-  showToast(`Welcome, ${result.user.username}`);
 }
 
 function syncKeywordControls(state) {
@@ -186,6 +255,7 @@ function syncKeywordControls(state) {
 }
 
 function renderState(state) {
+  dashboardState = state;
   syncKeywordControls(state);
   els.statEligible.textContent = state.eligible.length;
   els.statEntries.textContent = state.recentEntries.length;
@@ -194,14 +264,16 @@ function renderState(state) {
   els.connection.textContent = state.chatConnected ? "Live" : "Offline";
   els.connection.className = `pill ${state.chatConnected ? "pill-online" : "pill-offline"}`;
 
+  renderWheelIdle(state.eligible);
+
   renderList(
     els.entries,
     state.recentEntries,
     (entry) => `
       <article class="row">
         <div class="row-main">
-          <div class="row-title">${entry.username}</div>
-          <div class="row-meta">${entry.message}</div>
+          <div class="row-title">${escapeHtml(entry.username)}</div>
+          <div class="row-meta">${escapeHtml(entry.message)}</div>
         </div>
         <div>
           <span class="status-${entry.status}">${statusLabel(entry.status)}</span>
@@ -218,7 +290,7 @@ function renderState(state) {
     (entry) => `
       <article class="row">
         <div class="row-main">
-          <div class="row-title">${entry.username}</div>
+          <div class="row-title">${escapeHtml(entry.username)}</div>
           <div class="row-meta">Joined ${new Date(entry.timestamp).toLocaleTimeString()}</div>
         </div>
         ${riskBadge(entry.riskLevel)}
@@ -233,7 +305,7 @@ function renderState(state) {
     (winner) => `
       <article class="row">
         <div class="row-main">
-          <div class="row-title">🏆 ${winner.username}</div>
+          <div class="row-title">🏆 ${escapeHtml(winner.username)}</div>
           <div class="row-meta">${new Date(winner.timestamp).toLocaleString()}</div>
         </div>
       </article>
@@ -285,10 +357,6 @@ els.keywordInput.addEventListener("keydown", (event) => {
   }
 });
 
-for (const button of els.authTabs) {
-  button.addEventListener("click", () => setAuthTab(button.dataset.tab));
-}
-
 for (const button of els.viewerTabs) {
   button.addEventListener("click", () => setViewerTab(button.dataset.viewerTab));
 }
@@ -334,52 +402,54 @@ els.viewerLogoutBtn.addEventListener("click", async () => {
   }
 
   renderViewerState(null);
-  renderAuthState(null);
   setViewerTab("signup");
   showToast("Signed out");
 });
 
-els.signupForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  await submitAuthForm("/api/auth/signup", els.signupForm);
-});
-
-els.loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  await submitAuthForm("/api/auth/login", els.loginForm);
-});
-
-els.logoutBtn.addEventListener("click", async () => {
-  const response = await fetch("/api/auth/logout", { method: "POST" });
-  const result = await response.json();
-
-  if (!response.ok || !result.ok) {
-    showToast("Could not sign out");
+els.drawBtn.addEventListener("click", async () => {
+  if (isSpinning) {
     return;
   }
 
-  renderAuthState(null);
-  renderViewerState(null);
-  setAuthTab("login");
-  showToast("Signed out");
-});
-
-els.drawBtn.addEventListener("click", async () => {
-  const count = Number(els.drawCount.value) || 1;
-  const response = await fetch("/api/draw", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ count }),
-  });
-  const result = await response.json();
-
-  if (!result.winners?.length) {
-    showToast("No winners drawn");
-  } else {
-    showToast(`Winner: ${result.winners.map((w) => w.username).join(", ")}`);
+  const eligible = dashboardState?.eligible ?? [];
+  if (!eligible.length) {
+    showToast("No eligible viewers to draw");
+    return;
   }
 
-  if (result.state) renderState(result.state);
+  isSpinning = true;
+  els.drawBtn.disabled = true;
+
+  try {
+    const count = Number(els.drawCount.value) || 1;
+    const response = await fetch("/api/draw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ count }),
+    });
+    const result = await response.json();
+
+    if (!result.winners?.length) {
+      showToast("No winners drawn");
+      return;
+    }
+
+    const winner = result.winners[0];
+    const usernames = eligible.map((entry) => entry.username);
+
+    await spinWheel(usernames, winner.username);
+
+    if (result.state) {
+      renderState(result.state);
+    }
+
+    showToast(`🏆 ${winner.username} won!`);
+  } catch {
+    showToast("Draw failed");
+  } finally {
+    isSpinning = false;
+    els.drawBtn.disabled = false;
+  }
 });
 
 socket.on("state", renderState);
@@ -387,7 +457,9 @@ socket.on("entry", (entry) => {
   showToast(`${entry.username} ${statusLabel(entry.status).toLowerCase()}`);
 });
 socket.on("winner", (winner) => {
-  showToast(`🏆 ${winner.username} won!`);
+  if (!isSpinning) {
+    showToast(`🏆 ${winner.username} won!`);
+  }
 });
 socket.on("chat_status", (status) => {
   if (status.error) {
@@ -401,5 +473,4 @@ fetch("/api/state")
   .catch(() => showToast("Failed to load dashboard state"));
 
 loadCurrentUser().catch(() => showToast("Failed to load account status"));
-setAuthTab("signup");
 setViewerTab("signup");
