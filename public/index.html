@@ -131,6 +131,83 @@
 
         <section class="panel panel-wide">
           <div class="panel-header">
+            <h2>Viewer signup</h2>
+            <span class="panel-hint">Link your Kick account to enter giveaways</span>
+          </div>
+
+          <div id="viewer-signed-in" class="account-signed-in hidden">
+            <div>
+              <p>
+                Linked Kick:
+                <strong id="signed-in-viewer-kick">—</strong>
+              </p>
+            </div>
+            <button id="viewer-logout-btn" class="btn btn-secondary" type="button">
+              Sign out
+            </button>
+          </div>
+
+          <div id="viewer-forms" class="account-forms">
+            <div class="auth-tabs">
+              <button class="auth-tab active" type="button" data-viewer-tab="signup">
+                Create viewer account
+              </button>
+              <button class="auth-tab" type="button" data-viewer-tab="login">
+                Viewer sign in
+              </button>
+            </div>
+
+            <form id="viewer-signup-form" class="auth-form auth-form-viewer">
+              <label>
+                Kick username
+                <input
+                  id="viewer-kick-username-input"
+                  name="kickUsername"
+                  type="text"
+                  placeholder="your_kick_name"
+                  required
+                  minlength="2"
+                  maxlength="25"
+                />
+              </label>
+              <label>
+                Email <span class="optional">(optional)</span>
+                <input name="email" type="email" autocomplete="email" />
+              </label>
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  autocomplete="new-password"
+                  required
+                  minlength="8"
+                />
+              </label>
+              <div class="auth-form-actions">
+                <button id="verify-viewer-kick-btn" class="btn btn-secondary" type="button">
+                  Verify Kick account
+                </button>
+                <button class="btn btn-primary" type="submit">Create viewer account</button>
+              </div>
+            </form>
+
+            <form id="viewer-login-form" class="auth-form hidden">
+              <label>
+                Kick username
+                <input name="kickUsername" type="text" required minlength="2" maxlength="25" />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required />
+              </label>
+              <button class="btn btn-primary" type="submit">Sign in</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
             <h2>Winners</h2>
             <div class="draw-controls">
               <label>

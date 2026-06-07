@@ -10,7 +10,16 @@ const els = {
   signupForm: document.getElementById("signup-form"),
   loginForm: document.getElementById("login-form"),
   logoutBtn: document.getElementById("logout-btn"),
-  authTabs: document.querySelectorAll(".auth-tab"),
+  authTabs: document.querySelectorAll("[data-tab]"),
+  viewerForms: document.getElementById("viewer-forms"),
+  viewerSignedIn: document.getElementById("viewer-signed-in"),
+  signedInViewerKick: document.getElementById("signed-in-viewer-kick"),
+  viewerKickUsernameInput: document.getElementById("viewer-kick-username-input"),
+  verifyViewerKickBtn: document.getElementById("verify-viewer-kick-btn"),
+  viewerSignupForm: document.getElementById("viewer-signup-form"),
+  viewerLoginForm: document.getElementById("viewer-login-form"),
+  viewerLogoutBtn: document.getElementById("viewer-logout-btn"),
+  viewerTabs: document.querySelectorAll("[data-viewer-tab]"),
   connection: document.getElementById("connection-pill"),
   drawBtn: document.getElementById("draw-btn"),
   drawCount: document.getElementById("draw-count"),
@@ -58,6 +67,7 @@ async function loadCurrentUser() {
   const response = await fetch("/api/auth/me");
   const result = await response.json();
   renderAuthState(result.user);
+  renderViewerState(result.viewer);
 }
 
 function renderAuthState(user) {
@@ -70,9 +80,33 @@ function renderAuthState(user) {
     return;
   }
 
+  if (!els.viewerSignedIn.classList.contains("hidden")) {
+    return;
+  }
+
   els.accountPill.classList.add("hidden");
   els.accountSignedIn.classList.add("hidden");
   els.accountForms.classList.remove("hidden");
+}
+
+function renderViewerState(viewer) {
+  if (viewer) {
+    els.accountPill.textContent = viewer.kickUsername;
+    els.accountPill.classList.remove("hidden");
+    els.signedInViewerKick.textContent = `${viewer.kickUsername} (${viewer.kickChatroomId})`;
+    els.viewerSignedIn.classList.remove("hidden");
+    els.viewerForms.classList.add("hidden");
+    els.accountSignedIn.classList.add("hidden");
+    els.accountForms.classList.add("hidden");
+    return;
+  }
+
+  if (!els.accountSignedIn.classList.contains("hidden")) {
+    return;
+  }
+
+  els.viewerSignedIn.classList.add("hidden");
+  els.viewerForms.classList.remove("hidden");
 }
 
 function setAuthTab(tab) {
@@ -82,6 +116,38 @@ function setAuthTab(tab) {
 
   els.signupForm.classList.toggle("hidden", tab !== "signup");
   els.loginForm.classList.toggle("hidden", tab !== "login");
+}
+
+function setViewerTab(tab) {
+  for (const button of els.viewerTabs) {
+    button.classList.toggle("active", button.dataset.viewerTab === tab);
+  }
+
+  els.viewerSignupForm.classList.toggle("hidden", tab !== "signup");
+  els.viewerLoginForm.classList.toggle("hidden", tab !== "login");
+}
+
+async function submitViewerForm(url, form) {
+  const data = new FormData(form);
+  const body = Object.fromEntries(data.entries());
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Viewer account request failed");
+    return;
+  }
+
+  form.reset();
+  renderAuthState(null);
+  renderViewerState(result.viewer);
+  showToast(`Linked Kick account: ${result.viewer.kickUsername}`);
 }
 
 async function submitAuthForm(url, form) {
@@ -102,6 +168,7 @@ async function submitAuthForm(url, form) {
   }
 
   form.reset();
+  renderViewerState(null);
   renderAuthState(result.user);
   showToast(`Welcome, ${result.user.username}`);
 }
@@ -222,6 +289,56 @@ for (const button of els.authTabs) {
   button.addEventListener("click", () => setAuthTab(button.dataset.tab));
 }
 
+for (const button of els.viewerTabs) {
+  button.addEventListener("click", () => setViewerTab(button.dataset.viewerTab));
+}
+
+async function verifyViewerKickAccount() {
+  const slug = els.viewerKickUsernameInput.value.trim();
+  if (!slug) {
+    showToast("Enter your Kick username first");
+    return;
+  }
+
+  const response = await fetch(`/api/kick/lookup?slug=${encodeURIComponent(slug)}`);
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast(result.error ?? "Could not verify Kick account");
+    return;
+  }
+
+  els.viewerKickUsernameInput.value = result.channel.slug;
+  showToast(`Kick account verified: ${result.channel.slug}`);
+}
+
+els.verifyViewerKickBtn.addEventListener("click", verifyViewerKickAccount);
+
+els.viewerSignupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitViewerForm("/api/viewers/signup", els.viewerSignupForm);
+});
+
+els.viewerLoginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitViewerForm("/api/viewers/login", els.viewerLoginForm);
+});
+
+els.viewerLogoutBtn.addEventListener("click", async () => {
+  const response = await fetch("/api/auth/logout", { method: "POST" });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    showToast("Could not sign out");
+    return;
+  }
+
+  renderViewerState(null);
+  renderAuthState(null);
+  setViewerTab("signup");
+  showToast("Signed out");
+});
+
 els.signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await submitAuthForm("/api/auth/signup", els.signupForm);
@@ -242,6 +359,7 @@ els.logoutBtn.addEventListener("click", async () => {
   }
 
   renderAuthState(null);
+  renderViewerState(null);
   setAuthTab("login");
   showToast("Signed out");
 });
@@ -284,3 +402,4 @@ fetch("/api/state")
 
 loadCurrentUser().catch(() => showToast("Failed to load account status"));
 setAuthTab("signup");
+setViewerTab("signup");

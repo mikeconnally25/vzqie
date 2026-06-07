@@ -4,6 +4,7 @@ import type { PublicUser } from "./types.js";
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    viewerId?: string;
   }
 }
 

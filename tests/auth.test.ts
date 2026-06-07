@@ -5,11 +5,18 @@ import path from "node:path";
 import { describe, it, before, after } from "node:test";
 import { AuthService } from "../src/auth/authService.js";
 import { UserStore } from "../src/auth/userStore.js";
+import { ViewerService } from "../src/auth/viewerService.js";
+import { ViewerStore } from "../src/auth/viewerStore.js";
 import {
   normalizeKickSlug,
   validateChatroomId,
   validateKickSlug,
 } from "../src/kick/kickChannelLookup.js";
+
+const mockKickLookup = async (slug: string) => ({
+  slug: normalizeKickSlug(slug),
+  chatroomId: 282833,
+});
 
 describe("Kick account validation", () => {
   it("accepts valid kick slugs", () => {
@@ -74,6 +81,62 @@ describe("AuthService", () => {
           password: "wrong-password",
         }),
       /Invalid username or password/
+    );
+  });
+});
+
+describe("ViewerService", () => {
+  let tempDir = "";
+  let viewers: ViewerService;
+
+  before(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "giveaway-viewers-"));
+    viewers = new ViewerService(new ViewerStore(tempDir), mockKickLookup);
+  });
+
+  after(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it("creates a viewer account linked to Kick", async () => {
+    const viewer = await viewers.signup({
+      kickUsername: "viewer_one",
+      password: "password123",
+      email: "viewer@example.com",
+    });
+
+    assert.equal(viewer.kickUsername, "viewer_one");
+    assert.equal(viewer.kickChatroomId, 282833);
+  });
+
+  it("rejects duplicate Kick accounts", async () => {
+    await assert.rejects(
+      () =>
+        viewers.signup({
+          kickUsername: "viewer_one",
+          password: "anotherpass",
+        }),
+      /Kick account is already registered/
+    );
+  });
+
+  it("logs in with Kick credentials", async () => {
+    const viewer = await viewers.login({
+      kickUsername: "viewer_one",
+      password: "password123",
+    });
+
+    assert.equal(viewer.kickUsername, "viewer_one");
+  });
+
+  it("rejects invalid viewer passwords", async () => {
+    await assert.rejects(
+      () =>
+        viewers.login({
+          kickUsername: "viewer_one",
+          password: "wrong-password",
+        }),
+      /Invalid Kick username or password/
     );
   });
 });

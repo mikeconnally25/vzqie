@@ -254,8 +254,12 @@ h1 {
   align-items: end;
 }
 
-.auth-form-signup {
+.auth-form-viewer {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.auth-form-viewer .auth-form-actions {
+  grid-column: 1 / -1;
 }
 
 .auth-form-actions {

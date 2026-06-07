@@ -5,6 +5,8 @@ import { Server } from "socket.io";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { AuthService } from "./src/auth/authService.js";
+import { ViewerService } from "./src/auth/viewerService.js";
+import { lookupKickChannel } from "./src/kick/kickChannelLookup.js";
 import { GiveawayService, loadGiveawayConfig } from "./src/app/giveawayService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +34,7 @@ app.use(
 app.use(express.static(path.join(__dirname, "public")));
 
 const authService = new AuthService();
+const viewerService = new ViewerService();
 const service = new GiveawayService(loadGiveawayConfig());
 
 service.onEvent((event) => {
@@ -39,19 +42,42 @@ service.onEvent((event) => {
 });
 
 app.get("/api/auth/me", async (req, res) => {
-  if (!req.session.userId) {
-    res.json({ user: null });
+  let user = null;
+  let viewer = null;
+
+  if (req.session.userId) {
+    user = await authService.getUserById(req.session.userId);
+    if (!user) {
+      req.session.userId = undefined;
+    }
+  }
+
+  if (req.session.viewerId) {
+    viewer = await viewerService.getViewerById(req.session.viewerId);
+    if (!viewer) {
+      req.session.viewerId = undefined;
+    }
+  }
+
+  res.json({ user, viewer });
+});
+
+app.get("/api/kick/lookup", async (req, res) => {
+  const slug = typeof req.query.slug === "string" ? req.query.slug : "";
+  if (!slug.trim()) {
+    res.status(400).json({ ok: false, error: "Kick username is required." });
     return;
   }
 
-  const user = await authService.getUserById(req.session.userId);
-  if (!user) {
-    req.session.userId = undefined;
-    res.json({ user: null });
-    return;
+  try {
+    const channel = await lookupKickChannel(slug);
+    res.json({ ok: true, channel });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
-
-  res.json({ user });
 });
 
 app.post("/api/auth/signup", async (req, res) => {
@@ -69,6 +95,7 @@ app.post("/api/auth/signup", async (req, res) => {
       email,
     });
     req.session.userId = user.id;
+    req.session.viewerId = undefined;
 
     res.status(201).json({ ok: true, user });
   } catch (error) {
@@ -88,8 +115,55 @@ app.post("/api/auth/login", async (req, res) => {
 
     const user = await authService.login({ username, password });
     req.session.userId = user.id;
+    req.session.viewerId = undefined;
 
     res.json({ ok: true, user });
+  } catch (error) {
+    res.status(401).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+app.post("/api/viewers/signup", async (req, res) => {
+  try {
+    const kickUsername =
+      typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "";
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+    const email =
+      typeof req.body?.email === "string" ? req.body.email : undefined;
+
+    const viewer = await viewerService.signup({
+      kickUsername,
+      password,
+      email,
+    });
+    req.session.viewerId = viewer.id;
+    req.session.userId = undefined;
+
+    res.status(201).json({ ok: true, viewer });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+app.post("/api/viewers/login", async (req, res) => {
+  try {
+    const kickUsername =
+      typeof req.body?.kickUsername === "string" ? req.body.kickUsername : "";
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+
+    const viewer = await viewerService.login({ kickUsername, password });
+    req.session.viewerId = viewer.id;
+    req.session.userId = undefined;
+
+    res.json({ ok: true, viewer });
   } catch (error) {
     res.status(401).json({
       ok: false,
