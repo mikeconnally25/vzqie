@@ -177,6 +177,68 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative;
+}
+
+.reel-col.vs-expanding {
+  z-index: 2;
+  filter: drop-shadow(0 0 12px rgba(230, 57, 70, 0.65));
+}
+
+.reel-col.vs-expanded.duel-reel-col {
+  z-index: 1;
+}
+
+.reel-col.vs-expanded .cell {
+  background: linear-gradient(180deg, rgba(29, 78, 216, 0.55), rgba(245, 197, 24, 0.35));
+  border-color: var(--gold);
+}
+
+.col-duel-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(245, 197, 24, 0.95);
+  z-index: 5;
+  pointer-events: none;
+  animation: popIn 0.35s ease-out;
+}
+
+.col-duel-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  z-index: 6;
+  animation: popIn 0.25s ease-out;
+}
+
+.col-duel-athletes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.col-vs {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--red);
+  font-size: 1.2rem;
+}
+
+.col-duel-mult {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  color: var(--gold);
+  margin-top: 0.25rem;
 }
 
 .reel-col.spinning-col .cell {
@@ -199,6 +261,33 @@ body {
 .cell.has-lebron-jersey {
   background: rgba(74, 21, 96, 0.35);
   border-color: rgba(253, 185, 39, 0.45);
+}
+
+.cell.has-vs {
+  background: rgba(230, 57, 70, 0.28);
+  border-color: rgba(230, 57, 70, 0.65);
+  box-shadow: 0 0 14px rgba(230, 57, 70, 0.45);
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+}
+
+.cell.vs-source {
+  animation: vsPulse 0.35s ease-in-out infinite alternate;
+  z-index: 3;
+}
+
+.cell.vs-expanding-cell {
+  animation: vsExpand 0.45s ease-out;
+}
+
+@keyframes vsPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+@keyframes vsExpand {
+  0% { transform: scaleY(0.35); opacity: 0.5; }
+  60% { transform: scaleY(1.08); opacity: 1; }
+  100% { transform: scaleY(1); }
 }
 
 .symbol-img {

@@ -155,6 +155,7 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
   }
 
   const result: SpinResult = {
+    rawGrid: rawGrid.map((row) => [...row]),
     grid: duelGrid,
     duelReels,
     wins: winEvaluation.wins,

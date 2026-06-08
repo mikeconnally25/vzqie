@@ -55,6 +55,8 @@ export interface ChampionshipState {
 }
 
 export interface SpinResult {
+  /** Grid before VS duel expansion (shows VS symbols on reels). */
+  rawGrid: SymbolId[][];
   grid: SymbolId[][];
   duelReels: DuelReel[];
   wins: PaylineWin[];

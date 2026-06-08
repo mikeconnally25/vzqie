@@ -56,6 +56,7 @@ const reelFrameEl = $('reelFrame');
 const bigWinEl = $('bigWin');
 
 interface SavedSpin {
+  rawGrid?: SymbolId[][];
   grid: SymbolId[][];
   wins: PaylineWin[];
   duelReels: DuelReel[];
@@ -82,6 +83,7 @@ function saveState(): void {
     totalWon: state.totalWon,
     lastSpin: state.lastSpin
       ? {
+          rawGrid: state.lastSpin.rawGrid,
           grid: state.lastSpin.grid,
           wins: state.lastSpin.wins,
           duelReels: state.lastSpin.duelReels,
@@ -109,6 +111,7 @@ function loadState(): GameState | null {
     if (data.lastSpin) {
       restored.lastSpin = {
         ...data.lastSpin,
+        rawGrid: data.lastSpin.rawGrid ?? data.lastSpin.grid,
         scatterCount: {},
         triggeredBonus: null,
         phase: restored.phase,
@@ -149,7 +152,11 @@ function bonusDescription(type: string): string {
   }
 }
 
-function renderSymbol(cell: HTMLElement, def: (typeof SYMBOLS)[SymbolId]) {
+function renderSymbol(cell: HTMLElement, def: (typeof SYMBOLS)[SymbolId], symbolId?: SymbolId) {
+  cell.classList.remove('has-lebron-jersey', 'has-vs');
+  if (symbolId === 'VS') {
+    cell.classList.add('has-vs');
+  }
   if (def.customRender === 'lebron-jersey') {
     cell.classList.add('has-lebron-jersey');
     const img = document.createElement('img');
@@ -190,7 +197,7 @@ function renderGrid(
       if (winningPositions.has(key)) cell.classList.add('winning');
       if (duelCols.has(col)) cell.classList.add('wild-reel');
       if (sticky.has(key)) cell.classList.add('sticky-wild');
-      renderSymbol(cell, def);
+      renderSymbol(cell, def, symbol);
       cell.title = def.label;
 
       const mult = duelMults.get(col);
@@ -221,7 +228,8 @@ function renderSpinningGrid() {
     for (let row = 0; row < GRID_ROWS; row++) {
       const cell = document.createElement('div');
       cell.className = 'cell spinning';
-      renderSymbol(cell, SYMBOLS[randomSymbol()]);
+      const symbol = randomSymbol();
+      renderSymbol(cell, SYMBOLS[symbol], symbol);
       column.appendChild(cell);
     }
     gridEl.appendChild(column);
@@ -229,26 +237,98 @@ function renderSpinningGrid() {
 }
 
 async function animateReelStop(
-  finalGrid: SymbolId[][],
-  wins: PaylineWin[],
-  duelReels: DuelReel[],
+  rawGrid: SymbolId[][],
   stickyWilds: StickyWild[],
 ): Promise<void> {
   const columns = [...gridEl.querySelectorAll<HTMLElement>('.reel-col')];
   for (let col = 0; col < columns.length; col++) {
     await delay(120 + col * 90);
     const column = columns[col];
-    column.classList.remove('spinning-col');
+    column.classList.remove('spinning-col', 'vs-expanding', 'vs-expanded', 'duel-reel-col');
+    column.querySelector('.col-duel-badge')?.remove();
     const cells = column.querySelectorAll<HTMLElement>('.cell');
     cells.forEach((cell, row) => {
       cell.classList.remove('spinning');
       cell.innerHTML = '';
       cell.className = 'cell landed';
-      renderSymbol(cell, SYMBOLS[finalGrid[row][col]]);
-      cell.title = SYMBOLS[finalGrid[row][col]].label;
+      const symbol = rawGrid[row][col];
+      renderSymbol(cell, SYMBOLS[symbol], symbol);
+      cell.title = SYMBOLS[symbol].label;
+      if (stickySet(stickyWilds).has(`${row},${col}`)) {
+        cell.classList.add('sticky-wild');
+      }
     });
-    applyColumnVisuals(col, wins, duelReels, stickyWilds);
   }
+}
+
+async function animateVsExpansion(
+  rawGrid: SymbolId[][],
+  finalGrid: SymbolId[][],
+  duelReels: DuelReel[],
+): Promise<void> {
+  for (const duel of duelReels) {
+    if (!duel.expanded) continue;
+
+    const column = gridEl.querySelector<HTMLElement>(`.reel-col[data-col="${duel.col}"]`);
+    if (!column) continue;
+
+    const vsRow = findVsRow(rawGrid, duel.col);
+    column.classList.add('vs-expanding');
+    if (vsRow >= 0) {
+      const vsCell = column.querySelectorAll<HTMLElement>('.cell')[vsRow];
+      vsCell?.classList.add('vs-source');
+    }
+
+    await delay(350);
+
+    const badge = document.createElement('div');
+    badge.className = 'col-duel-badge';
+    badge.textContent = `×${duel.multiplier}`;
+    column.appendChild(badge);
+
+    const cells = column.querySelectorAll<HTMLElement>('.cell');
+    cells.forEach((cell, row) => {
+      cell.classList.remove('vs-source');
+      cell.classList.add('vs-expanding-cell');
+      cell.innerHTML = '';
+      const symbol = finalGrid[row][duel.col];
+      renderSymbol(cell, SYMBOLS[symbol], symbol);
+      cell.title = SYMBOLS[symbol].label;
+    });
+
+    column.classList.remove('vs-expanding');
+    column.classList.add('vs-expanded', 'duel-reel-col');
+    await playColumnDuel(duel.col, duel.multiplier);
+    await delay(200);
+
+    cells.forEach((cell) => cell.classList.remove('vs-expanding-cell'));
+  }
+}
+
+function findVsRow(grid: SymbolId[][], col: number): number {
+  for (let row = 0; row < GRID_ROWS; row++) {
+    if (grid[row][col] === 'VS') return row;
+  }
+  return -1;
+}
+
+async function playColumnDuel(col: number, multiplier: number): Promise<void> {
+  const column = gridEl.querySelector<HTMLElement>(`.reel-col[data-col="${col}"]`);
+  if (!column) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'col-duel-overlay';
+  overlay.innerHTML = `
+    <div class="col-duel-athletes">
+      <span>🏃</span>
+      <span class="col-vs">VS</span>
+      <span>🏃‍♂️</span>
+    </div>
+    <div class="col-duel-mult">×${multiplier}</div>
+  `;
+  column.appendChild(overlay);
+  await delay(900);
+  overlay.remove();
 }
 
 function applyColumnVisuals(
@@ -386,13 +466,6 @@ function updateUI(options: { refreshGrid?: boolean } = {}) {
   }
 }
 
-async function playDuelAnimation(multiplier: number): Promise<void> {
-  duelMultiplierEl.textContent = `×${multiplier}`;
-  duelOverlayEl.classList.remove('hidden');
-  await delay(1200);
-  duelOverlayEl.classList.add('hidden');
-}
-
 async function showBigWin(amount: number): Promise<void> {
   if (amount < state.bet * 10) return;
   bigWinEl.textContent = amount >= state.bet * 50 ? 'MEGA WIN!' : 'BIG WIN!';
@@ -424,13 +497,11 @@ async function doSpin(): Promise<void> {
   renderSpinningGrid();
 
   const { state: nextState, result } = spin(state);
-  await animateReelStop(result.grid, result.wins, result.duelReels, nextState.stickyWilds);
+  await animateReelStop(result.rawGrid, nextState.stickyWilds);
+  await animateVsExpansion(result.rawGrid, result.grid, result.duelReels);
   state = nextState;
 
   for (const event of result.events) {
-    if (event.type === 'duel') {
-      await playDuelAnimation(event.multiplier);
-    }
     if (event.type === 'bonus_trigger') {
       bonusPanelEl.classList.remove('hidden');
       bonusTitleEl.textContent = `${bonusDisplayName(event.bonus)} Triggered!`;
