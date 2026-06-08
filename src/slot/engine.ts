@@ -23,7 +23,7 @@ import {
 } from './grid.js';
 import type { Rng } from './rng.js';
 import { defaultRng } from './rng.js';
-import type { BonusType, GamePhase, GameState, SpinEvent, SpinResult } from './types.js';
+import type { BonusType, GamePhase, GameState, SpinEvent, SpinResult, SymbolId } from './types.js';
 
 export function createGameState(balance = DEFAULT_BALANCE, bet = MIN_BET): GameState {
   return {
@@ -47,6 +47,7 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
     throw new Error('Insufficient balance to spin');
   }
 
+  const phaseAtStart = state.phase;
   const isFreeSpin = state.freeSpinsRemaining > 0
     || state.phase === 'championship_collect'
     || state.phase === 'championship_showdown';
@@ -59,7 +60,8 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
   let championship = state.championship ? { ...state.championship } : undefined;
   const events: SpinEvent[] = [];
 
-  let rawGrid = spinGrid(phase === 'championship_showdown' ? 'base' : phase, rng);
+  let rawGrid = state.forcedGrid
+    ?? spinGrid(phase === 'championship_showdown' ? 'base' : phase, rng);
 
   if (phase === 'comeback') {
     rawGrid = applyStickyWilds(rawGrid, stickyWilds);
@@ -75,9 +77,14 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
   }
 
   let winEvaluation = evaluatePaylines(duelGrid, duelReels);
+
+  if (phaseAtStart === 'championship_collect') {
+    winEvaluation = { wins: [], totalPayout: 0 };
+  }
+
   let totalWin = winEvaluation.totalPayout * bet;
 
-  if (phase === 'championship_showdown' && championship && championship.collectedMultiplier > 0) {
+  if (phaseAtStart === 'championship_showdown' && championship && championship.collectedMultiplier > 0) {
     totalWin *= championship.collectedMultiplier;
   }
 
@@ -86,10 +93,12 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
 
   const scatterCount = countScatters(rawGrid);
   let triggeredBonus: BonusType = null;
+  let justTriggeredBonus = false;
 
   if (phase === 'base') {
     triggeredBonus = detectBonusTrigger(scatterCount, phase);
     if (triggeredBonus) {
+      justTriggeredBonus = true;
       events.push({ type: 'bonus_trigger', bonus: triggeredBonus });
       phase = bonusPhaseFor(triggeredBonus);
       freeSpinsRemaining = freeSpinsForBonus(triggeredBonus);
@@ -100,7 +109,7 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
     }
   }
 
-  if (phase === 'comeback') {
+  if (phase === 'comeback' && !justTriggeredBonus) {
     const newWilds = findNewWildPositions(duelGrid, stickyWilds);
     stickyWilds = [...stickyWilds, ...newWilds];
     freeSpinsRemaining = Math.max(0, freeSpinsRemaining - 1);
@@ -110,14 +119,14 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
     }
   }
 
-  if (phase === 'rivalry') {
+  if (phase === 'rivalry' && !justTriggeredBonus) {
     freeSpinsRemaining = Math.max(0, freeSpinsRemaining - 1);
     if (freeSpinsRemaining === 0) {
       phase = 'base';
     }
   }
 
-  if (phase === 'championship_collect' && championship) {
+  if (phase === 'championship_collect' && championship && !justTriggeredBonus) {
     const collected = collectChampionshipSymbols(rawGrid, rng);
     if (collected.wilds > 0 || collected.multiplier > 0) {
       events.push({
@@ -143,10 +152,6 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
       phase = 'base';
       championship = undefined;
     }
-  }
-
-  if (freeSpinsRemaining > 0 && phase !== 'championship_collect' && phase !== 'championship_showdown') {
-    // free spin counter already decremented above for comeback/rivalry
   }
 
   const result: SpinResult = {
@@ -178,6 +183,14 @@ export function spin(state: GameState, rng: Rng = defaultRng): { state: GameStat
   return { state: nextState, result };
 }
 
+export function withForcedGrid(state: GameState, grid: SymbolId[][]): GameState {
+  return { ...state, forcedGrid: grid.map((row) => [...row]) };
+}
+
 export function setBet(state: GameState, bet: number): GameState {
   return { ...state, bet };
+}
+
+export function resetGame(bet = MIN_BET): GameState {
+  return createGameState(DEFAULT_BALANCE, bet);
 }

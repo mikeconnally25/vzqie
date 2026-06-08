@@ -1,4 +1,11 @@
-import { GRID_COLS, GRID_ROWS, BASE_REEL_STRIPS, RIVALRY_REEL_STRIPS } from './constants.js';
+import {
+  GRID_COLS,
+  GRID_ROWS,
+  BASE_REEL_STRIPS,
+  COMEBACK_REEL_STRIPS,
+  CHAMPIONSHIP_COLLECT_STRIPS,
+  RIVALRY_REEL_STRIPS,
+} from './constants.js';
 import type { GamePhase, Position, StickyWild, SymbolId } from './types.js';
 import { pickRandom } from './rng.js';
 import type { Rng } from './rng.js';
@@ -8,7 +15,7 @@ export function createEmptyGrid(): SymbolId[][] {
 }
 
 export function spinGrid(phase: GamePhase, rng: Rng): SymbolId[][] {
-  const strips = phase === 'rivalry' ? RIVALRY_REEL_STRIPS : BASE_REEL_STRIPS;
+  const strips = selectReelStrips(phase);
   const grid = createEmptyGrid();
 
   for (let col = 0; col < GRID_COLS; col++) {
@@ -94,4 +101,17 @@ export function collectChampionshipSymbols(grid: SymbolId[][], rng: Rng): { wild
 function pickChampionshipMultiplierValue(rng: Rng): number {
   const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 31];
   return pickRandom(values, rng);
+}
+
+function selectReelStrips(phase: GamePhase): SymbolId[][] {
+  switch (phase) {
+    case 'rivalry':
+      return RIVALRY_REEL_STRIPS;
+    case 'comeback':
+      return COMEBACK_REEL_STRIPS;
+    case 'championship_collect':
+      return CHAMPIONSHIP_COLLECT_STRIPS;
+    default:
+      return BASE_REEL_STRIPS;
+  }
 }

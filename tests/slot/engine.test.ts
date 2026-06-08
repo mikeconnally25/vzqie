@@ -9,8 +9,14 @@ import {
   canSpin,
   spin,
   setBet,
+  withForcedGrid,
 } from '../../src/slot/index.js';
+import type { SymbolId } from '../../src/slot/types.js';
 import type { Rng } from '../../src/slot/rng.js';
+
+function scatterGrid(symbol: SymbolId): SymbolId[][] {
+  return Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => symbol));
+}
 
 function seededRng(seed: number): Rng {
   let value = seed;
@@ -87,5 +93,43 @@ describe('slot engine', () => {
       }
     }
     assert.equal(foundDuel, true);
+  });
+
+  it('awards full free spins when a bonus triggers', () => {
+    const grid = scatterGrid('SCATTER_COMEBACK');
+    const state = withForcedGrid(createGameState(1000, 1), grid);
+    const { state: next, result } = spin(state, seededRng(1));
+    assert.equal(result.triggeredBonus, 'comeback');
+    assert.equal(next.freeSpinsRemaining, 10);
+  });
+
+  it('decrements free spins only after the trigger spin', () => {
+    const state = {
+      ...createGameState(1000, 1),
+      phase: 'comeback' as const,
+      freeSpinsRemaining: 10,
+      stickyWilds: [],
+    };
+    const { state: next } = spin(state, seededRng(2));
+    assert.equal(next.freeSpinsRemaining, 9);
+  });
+
+  it('does not pay line wins during championship collect', () => {
+    let state = createGameState(1000, 1);
+    state = {
+      ...state,
+      phase: 'championship_collect',
+      championship: {
+        collectedWilds: 0,
+        collectedMultiplier: 0,
+        spinsRemaining: 3,
+        phase: 'collect',
+        showdownSpinsRemaining: 3,
+      },
+    };
+
+    const { result } = spin(state, seededRng(55));
+    assert.equal(result.totalWin, 0);
+    assert.equal(result.wins.length, 0);
   });
 });

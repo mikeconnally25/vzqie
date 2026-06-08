@@ -84,6 +84,8 @@ export interface GameState {
   championship?: ChampionshipState;
   lastSpin?: SpinResult;
   totalWon: number;
+  /** Test-only grid override; never persisted by the UI. */
+  forcedGrid?: SymbolId[][];
 }
 
 export interface SymbolDefinition {

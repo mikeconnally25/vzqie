@@ -66,12 +66,12 @@ function evaluateLine(
   line: number[],
   duelReels: DuelReel[],
 ): PaylineWin | null {
-  const firstPayable = resolvePayableSymbol(symbols[0]);
-  if (!firstPayable) return null;
+  const anchor = findLineAnchor(symbols);
+  if (!anchor) return null;
 
   let count = 0;
   for (const symbol of symbols) {
-    if (matchesSymbol(symbol, firstPayable)) {
+    if (matchesSymbol(symbol, anchor)) {
       count += 1;
     } else {
       break;
@@ -80,23 +80,38 @@ function evaluateLine(
 
   if (count < 3) return null;
 
-  const definition = SYMBOLS[firstPayable];
+  const definition = SYMBOLS[anchor];
   const basePayout = definition.pays[count as 3 | 4 | 5];
   if (!basePayout) return null;
 
   const positions: Position[] = line.slice(0, count).map((row, col) => ({ row, col }));
-  const multiplier = sumDuelMultipliers(positions, duelReels);
-  const totalPayout = basePayout * (multiplier > 0 ? multiplier : 1);
+  const duelMultiplier = sumDuelMultipliers(positions, duelReels);
+  const lineMultiplier = duelMultiplier > 0 ? duelMultiplier : 1;
+  const totalPayout = basePayout * lineMultiplier;
 
   return {
     paylineIndex,
-    symbol: firstPayable,
+    symbol: anchor,
     count,
     positions,
     basePayout,
-    multiplier: multiplier > 0 ? multiplier : 1,
+    multiplier: lineMultiplier,
     totalPayout,
   };
+}
+
+function findLineAnchor(symbols: SymbolId[]): SymbolId | null {
+  for (const symbol of symbols) {
+    if (symbol === 'WILD') continue;
+    if (WILD_SUBSTITUTES.includes(symbol)) return symbol;
+    return null;
+  }
+
+  if (symbols.length >= 5 && symbols.every((symbol) => symbol === 'WILD')) {
+    return 'WILD';
+  }
+
+  return null;
 }
 
 function sumDuelMultipliers(positions: Position[], duelReels: DuelReel[]): number {
@@ -112,12 +127,6 @@ function sumDuelMultipliers(positions: Position[], duelReels: DuelReel[]): numbe
     if (duel) sum += duel.multiplier;
   }
   return sum;
-}
-
-function resolvePayableSymbol(symbol: SymbolId): SymbolId | null {
-  if (symbol === 'WILD') return null;
-  if (WILD_SUBSTITUTES.includes(symbol)) return symbol;
-  return null;
 }
 
 function matchesSymbol(symbol: SymbolId, target: SymbolId): boolean {

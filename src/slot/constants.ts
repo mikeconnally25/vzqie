@@ -62,6 +62,22 @@ export const RIVALRY_REEL_STRIPS: SymbolId[][] = BASE_REEL_STRIPS.map((strip) =>
   return boosted;
 });
 
+/** Comeback bonus favors wild medals landing on the reels. */
+export const COMEBACK_REEL_STRIPS: SymbolId[][] = BASE_REEL_STRIPS.map((strip) => {
+  const boosted = [...strip];
+  boosted.splice(4, 0, 'WILD', 'WILD');
+  boosted.splice(14, 0, 'WILD');
+  return boosted;
+});
+
+/** Championship collect phase favors wilds and VS multiplier symbols. */
+export const CHAMPIONSHIP_COLLECT_STRIPS: SymbolId[][] = BASE_REEL_STRIPS.map((strip) => {
+  const boosted = [...strip];
+  boosted.splice(2, 0, 'WILD', 'VS', 'WILD', 'VS');
+  boosted.splice(16, 0, 'WILD', 'VS');
+  return boosted;
+});
+
 export const FREE_SPINS_AWARDED = 10;
 export const CHAMPIONSHIP_COLLECT_SPINS = 3;
 export const CHAMPIONSHIP_SHOWDOWN_SPINS = 3;
