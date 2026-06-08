@@ -11,7 +11,7 @@ import {
   resetGame,
   bonusDisplayName,
 } from '../src/slot/index.js';
-import type { GameState, PaylineWin, StickyWild, SymbolId } from '../src/slot/types.js';
+import type { DuelReel, GameState, PaylineWin, SpinResult, StickyWild, SymbolId } from '../src/slot/types.js';
 
 const BET_STEPS = [0.2, 0.5, 1, 2, 5, 10, 20, 50, 100];
 const STORAGE_KEY = 'game-day-showdown-state';
@@ -55,9 +55,17 @@ const gameOverReset = $('gameOverReset');
 const reelFrameEl = $('reelFrame');
 const bigWinEl = $('bigWin');
 
+interface SavedSpin {
+  grid: SymbolId[][];
+  wins: PaylineWin[];
+  duelReels: DuelReel[];
+  totalWin: number;
+}
+
 let state: GameState = loadState() ?? createGameState();
 let spinning = false;
 let autoSpinsLeft = 0;
+let gameOverShown = false;
 
 function formatMoney(amount: number): string {
   return `$${amount.toFixed(2)}`;
@@ -72,6 +80,14 @@ function saveState(): void {
     stickyWilds: state.stickyWilds,
     championship: state.championship,
     totalWon: state.totalWon,
+    lastSpin: state.lastSpin
+      ? {
+          grid: state.lastSpin.grid,
+          wins: state.lastSpin.wins,
+          duelReels: state.lastSpin.duelReels,
+          totalWin: state.lastSpin.totalWin,
+        }
+      : undefined,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -80,15 +96,30 @@ function loadState(): GameState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as Partial<GameState>;
-    return {
-      ...createGameState(data.balance ?? DEFAULT_BALANCE, data.bet ?? 0.2),
+    const data = JSON.parse(raw) as Partial<GameState> & { lastSpin?: SavedSpin };
+    const base = createGameState(data.balance ?? DEFAULT_BALANCE, data.bet ?? 0.2);
+    const restored: GameState = {
+      ...base,
       phase: data.phase ?? 'base',
       freeSpinsRemaining: data.freeSpinsRemaining ?? 0,
       stickyWilds: data.stickyWilds ?? [],
       championship: data.championship,
       totalWon: data.totalWon ?? 0,
     };
+    if (data.lastSpin) {
+      restored.lastSpin = {
+        ...data.lastSpin,
+        scatterCount: {},
+        triggeredBonus: null,
+        phase: restored.phase,
+        freeSpinsAwarded: 0,
+        freeSpinsRemaining: restored.freeSpinsRemaining,
+        championship: restored.championship,
+        stickyWilds: restored.stickyWilds,
+        events: [],
+      };
+    }
+    return restored;
   } catch {
     return null;
   }
@@ -197,7 +228,12 @@ function renderSpinningGrid() {
   }
 }
 
-async function animateReelStop(finalGrid: SymbolId[][], stickyWilds: StickyWild[]): Promise<void> {
+async function animateReelStop(
+  finalGrid: SymbolId[][],
+  wins: PaylineWin[],
+  duelReels: DuelReel[],
+  stickyWilds: StickyWild[],
+): Promise<void> {
   const columns = [...gridEl.querySelectorAll<HTMLElement>('.reel-col')];
   for (let col = 0; col < columns.length; col++) {
     await delay(120 + col * 90);
@@ -208,12 +244,50 @@ async function animateReelStop(finalGrid: SymbolId[][], stickyWilds: StickyWild[
       cell.classList.remove('spinning');
       cell.innerHTML = '';
       cell.className = 'cell landed';
-      if (stickySet(stickyWilds).has(`${row},${col}`)) {
-        cell.classList.add('sticky-wild');
-      }
       renderSymbol(cell, SYMBOLS[finalGrid[row][col]]);
       cell.title = SYMBOLS[finalGrid[row][col]].label;
     });
+    applyColumnVisuals(col, wins, duelReels, stickyWilds);
+  }
+}
+
+function applyColumnVisuals(
+  col: number,
+  wins: PaylineWin[],
+  duelReels: DuelReel[],
+  stickyWilds: StickyWild[],
+) {
+  const winningPositions = new Set<string>();
+  for (const win of wins) {
+    for (const pos of win.positions) {
+      winningPositions.add(`${pos.row},${pos.col}`);
+    }
+  }
+  const duelCol = duelReels.find((d) => d.col === col && d.expanded);
+  const column = gridEl.querySelector<HTMLElement>(`.reel-col[data-col="${col}"]`);
+  if (!column) return;
+
+  const cells = column.querySelectorAll<HTMLElement>('.cell');
+  cells.forEach((cell, row) => {
+    const key = `${row},${col}`;
+    cell.classList.remove('winning', 'wild-reel', 'sticky-wild');
+    cell.querySelector('.mult-badge')?.remove();
+
+    if (stickySet(stickyWilds).has(key)) cell.classList.add('sticky-wild');
+    if (winningPositions.has(key)) cell.classList.add('winning');
+    if (duelCol) {
+      cell.classList.add('wild-reel');
+      const badge = document.createElement('span');
+      badge.className = 'mult-badge';
+      badge.textContent = `×${duelCol.multiplier}`;
+      cell.appendChild(badge);
+    }
+  });
+}
+
+function applyResultVisuals(result: SpinResult, stickyWilds: StickyWild[]) {
+  for (let col = 0; col < GRID_COLS; col++) {
+    applyColumnVisuals(col, result.wins, result.duelReels, stickyWilds);
   }
 }
 
@@ -232,7 +306,7 @@ function renderWinDetails(wins: PaylineWin[]) {
     .join('');
 }
 
-function updateUI() {
+function updateUI(options: { refreshGrid?: boolean } = {}) {
   balanceEl.textContent = formatMoney(state.balance);
   lastWinEl.textContent = formatMoney(state.lastSpin?.totalWin ?? 0);
   totalWonEl.textContent = formatMoney(state.totalWon);
@@ -275,7 +349,7 @@ function updateUI() {
     championshipPanelEl.classList.add('hidden');
   }
 
-  if (state.lastSpin) {
+  if (options.refreshGrid && state.lastSpin) {
     const winningPositions = new Set<string>();
     for (const win of state.lastSpin.wins) {
       for (const pos of win.positions) {
@@ -291,19 +365,24 @@ function updateUI() {
       duelMults,
       state.stickyWilds,
     );
-    renderWinDetails(state.lastSpin.wins);
+  }
 
+  if (state.lastSpin) {
+    renderWinDetails(state.lastSpin.wins);
     if (state.lastSpin.totalWin > 0) {
       winLineEl.textContent = `WIN ${formatMoney(state.lastSpin.totalWin)}`;
-    } else {
-      winLineEl.textContent = '';
     }
   }
 
   saveState();
 
   if (!spinning && !canSpin(state) && state.phase === 'base') {
-    gameOverModal.showModal();
+    if (!gameOverShown) {
+      gameOverModal.showModal();
+      gameOverShown = true;
+    }
+  } else {
+    gameOverShown = false;
   }
 }
 
@@ -345,7 +424,7 @@ async function doSpin(): Promise<void> {
   renderSpinningGrid();
 
   const { state: nextState, result } = spin(state);
-  await animateReelStop(result.grid, nextState.stickyWilds);
+  await animateReelStop(result.grid, result.wins, result.duelReels, nextState.stickyWilds);
   state = nextState;
 
   for (const event of result.events) {
@@ -376,6 +455,7 @@ async function doSpin(): Promise<void> {
   updateUI();
   await showBigWin(result.totalWin);
   spinning = false;
+  applyResultVisuals(result, state.stickyWilds);
 
   if (shouldAutoContinue() && canSpin(state)) {
     if (autoSpinsLeft > 0) autoSpinsLeft -= 1;
@@ -416,6 +496,8 @@ function buildPaytable() {
 
 function hardReset() {
   autoSpinsLeft = 0;
+  gameOverShown = false;
+  localStorage.removeItem(STORAGE_KEY);
   state = resetGame(state.bet);
   gameOverModal.close();
   bonusPanelEl.classList.add('hidden');
@@ -458,7 +540,17 @@ buildPaytable();
 const initialGrid: SymbolId[][] = Array.from({ length: GRID_ROWS }, (_, row) =>
   Array.from({ length: GRID_COLS }, () => (row === 0 ? 'JERSEY' : 'FOOTBALL') as SymbolId),
 );
-if (!state.lastSpin) {
+if (state.lastSpin) {
+  const winningPositions = new Set<string>();
+  for (const win of state.lastSpin.wins) {
+    for (const pos of win.positions) {
+      winningPositions.add(`${pos.row},${pos.col}`);
+    }
+  }
+  const duelCols = new Set(state.lastSpin.duelReels.map((d) => d.col));
+  const duelMults = new Map(state.lastSpin.duelReels.map((d) => [d.col, d.multiplier]));
+  renderGrid(state.lastSpin.grid, winningPositions, duelCols, duelMults, state.stickyWilds);
+} else {
   renderGrid(initialGrid, new Set(), new Set(), new Map());
 }
 updateUI();
