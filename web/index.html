@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Day Showdown — Sports Slot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="arena">
+      <div class="stadium-lights"></div>
+      <header class="scoreboard">
+        <div class="brand">
+          <span class="brand-icon">🏟️</span>
+          <div>
+            <h1>Game Day Showdown</h1>
+            <p class="tagline">Head-to-Head Reels · 15 Paylines · Max Win 12,500×</p>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Balance</span>
+            <span class="stat-value" id="balance">$1000.00</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Last Win</span>
+            <span class="stat-value win" id="lastWin">$0.00</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Total Won</span>
+            <span class="stat-value" id="totalWon">$0.00</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="machine">
+        <div class="phase-banner" id="phaseBanner">Base Game</div>
+
+        <div class="reel-frame">
+          <div class="payline-indicator">15 LINES</div>
+          <div class="grid" id="grid"></div>
+          <div class="duel-overlay hidden" id="duelOverlay">
+            <div class="duel-content">
+              <div class="athlete home">🏃</div>
+              <div class="vs-badge">VS</div>
+              <div class="athlete away">🏃‍♂️</div>
+            </div>
+            <div class="duel-multiplier" id="duelMultiplier">×2</div>
+          </div>
+        </div>
+
+        <div class="win-line" id="winLine"></div>
+
+        <div class="bonus-panel hidden" id="bonusPanel">
+          <h3 id="bonusTitle">Bonus Triggered!</h3>
+          <p id="bonusDesc"></p>
+        </div>
+
+        <div class="championship-panel hidden" id="championshipPanel">
+          <div class="champ-stat">
+            <span>Wilds Collected</span>
+            <strong id="champWilds">0</strong>
+          </div>
+          <div class="champ-stat">
+            <span>Multiplier</span>
+            <strong id="champMult">×0</strong>
+          </div>
+          <div class="champ-stat">
+            <span>Spins Left</span>
+            <strong id="champSpins">3</strong>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="bet-control">
+            <button class="btn secondary" id="betDown" aria-label="Decrease bet">−</button>
+            <div class="bet-display">
+              <span class="bet-label">Bet</span>
+              <span class="bet-value" id="betValue">$0.20</span>
+            </div>
+            <button class="btn secondary" id="betUp" aria-label="Increase bet">+</button>
+          </div>
+
+          <button class="btn spin" id="spinBtn">
+            <span class="spin-text">SPIN</span>
+            <span class="spin-sub" id="spinSub"></span>
+          </button>
+
+          <button class="btn secondary" id="autoBtn">Auto ×10</button>
+        </div>
+      </main>
+
+      <section class="features">
+        <article class="feature-card">
+          <span class="feature-icon">⚔️</span>
+          <h3>Head-to-Head Reels</h3>
+          <p>VS symbols duel on the field. The winner expands the reel wild with a 2×–100× multiplier.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">🔥</span>
+          <h3>The Great Comeback</h3>
+          <p>3 Comeback scatters award 10 free spins with sticky wild medals.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">⚡</span>
+          <h3>Rivalry Match</h3>
+          <p>3 Rivalry scatters trigger 10 free spins packed with extra VS symbols.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">👑</span>
+          <h3>Championship Run</h3>
+          <p>Collect wilds and multipliers, then unleash them in a 3-spin showdown finale.</p>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>Inspired by high-volatility duel-reel slots · For entertainment only · No real-money gambling</p>
+      </footer>
+    </div>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>
