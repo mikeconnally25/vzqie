@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 96" role="img" aria-label="LeBron James jersey">
+  <defs>
+    <linearGradient id="jerseyBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6b2d8a"/>
+      <stop offset="100%" stop-color="#4a1560"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 14 L10 24 L18 30 L22 24 L22 86 Q40 92 58 86 L58 24 L62 30 L70 24 L62 14 Q40 8 18 14Z" fill="url(#jerseyBody)" stroke="#FDB927" stroke-width="2.5"/>
+  <path d="M22 24 L58 24" stroke="#FDB927" stroke-width="2"/>
+  <text x="40" y="52" text-anchor="middle" fill="#FDB927" font-family="Arial Black, sans-serif" font-size="22" font-weight="900">23</text>
+  <text x="40" y="72" text-anchor="middle" fill="#FDB927" font-family="Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5">JAMES</text>
+</svg>
