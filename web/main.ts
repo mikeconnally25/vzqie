@@ -70,6 +70,19 @@ function bonusDescription(type: string): string {
   }
 }
 
+function renderSymbol(cell: HTMLElement, def: (typeof SYMBOLS)[SymbolId]) {
+  if (def.customRender === 'lebron-jersey') {
+    cell.classList.add('has-lebron-jersey');
+    const img = document.createElement('img');
+    img.src = '/lebron-jersey.svg';
+    img.alt = def.label;
+    img.className = 'symbol-img lebron-jersey';
+    cell.appendChild(img);
+    return;
+  }
+  cell.textContent = def.emoji;
+}
+
 function renderGrid(grid: SymbolId[][], winningPositions: Set<string>, duelCols: Set<number>, duelMults: Map<number, number>) {
   gridEl.innerHTML = '';
   for (let row = 0; row < grid.length; row++) {
@@ -81,7 +94,7 @@ function renderGrid(grid: SymbolId[][], winningPositions: Set<string>, duelCols:
       const key = `${row},${col}`;
       if (winningPositions.has(key)) cell.classList.add('winning');
       if (duelCols.has(col)) cell.classList.add('wild-reel');
-      cell.textContent = def.emoji;
+      renderSymbol(cell, def);
       cell.title = def.label;
 
       const mult = duelMults.get(col);
@@ -103,7 +116,7 @@ function renderSpinningGrid() {
     const cell = document.createElement('div');
     cell.className = 'cell spinning';
     const randomSymbol = SPIN_SYMBOLS[Math.floor(Math.random() * SPIN_SYMBOLS.length)];
-    cell.textContent = SYMBOLS[randomSymbol].emoji;
+    renderSymbol(cell, SYMBOLS[randomSymbol]);
     gridEl.appendChild(cell);
   }
 }
@@ -227,10 +240,8 @@ autoBtn.addEventListener('click', () => {
   void doSpin();
 });
 
-renderGrid(
-  Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => 'FOOTBALL' as SymbolId)),
-  new Set(),
-  new Set(),
-  new Map(),
+const initialGrid: SymbolId[][] = Array.from({ length: 5 }, (_, row) =>
+  Array.from({ length: 5 }, () => (row === 0 ? 'JERSEY' : 'FOOTBALL') as SymbolId),
 );
+renderGrid(initialGrid, new Set(), new Set(), new Map());
 updateUI();

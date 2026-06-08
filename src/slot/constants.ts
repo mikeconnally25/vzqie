@@ -30,7 +30,7 @@ export const SYMBOLS: Record<SymbolId, SymbolDefinition> = {
   WHISTLE: { id: 'WHISTLE', label: 'Whistle', emoji: '📯', tier: 'low', pays: { 3: 0.2, 4: 0.5, 5: 1 } },
   CONE: { id: 'CONE', label: 'Cone', emoji: '🔶', tier: 'low', pays: { 3: 0.2, 4: 0.5, 5: 1 } },
   BOTTLE: { id: 'BOTTLE', label: 'Bottle', emoji: '🧴', tier: 'low', pays: { 3: 0.3, 4: 0.6, 5: 1.2 } },
-  JERSEY: { id: 'JERSEY', label: 'Jersey', emoji: '👕', tier: 'low', pays: { 3: 0.3, 4: 0.8, 5: 1.5 } },
+  JERSEY: { id: 'JERSEY', label: 'LeBron James Jersey', emoji: '👕', tier: 'high', pays: { 3: 2.5, 4: 12, 5: 25 }, customRender: 'lebron-jersey' },
   FOOTBALL: { id: 'FOOTBALL', label: 'Football', emoji: '🏈', tier: 'mid', pays: { 3: 0.5, 4: 1.5, 5: 3 } },
   BASKETBALL: { id: 'BASKETBALL', label: 'Basketball', emoji: '🏀', tier: 'mid', pays: { 3: 0.5, 4: 1.5, 5: 3 } },
   SOCCER: { id: 'SOCCER', label: 'Soccer', emoji: '⚽', tier: 'mid', pays: { 3: 0.6, 4: 2, 5: 4 } },

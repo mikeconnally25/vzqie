@@ -92,4 +92,5 @@ export interface SymbolDefinition {
   emoji: string;
   tier: 'low' | 'mid' | 'high' | 'special';
   pays: Partial<Record<3 | 4 | 5, number>>;
+  customRender?: 'lebron-jersey';
 }
