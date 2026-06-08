@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6x6 Slot Machine</title>
+
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial, sans-serif;
+    text-align:center;
+}
+
+h1{
+    margin-top:20px;
+}
+
+#slot-machine{
+    width:720px;
+    margin:20px auto;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:4px;
+    background:#222;
+    padding:10px;
+    border-radius:10px;
+    border:4px solid gold;
+}
+
+.cell{
+    width:110px;
+    height:110px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:48px;
+    background:#333;
+    border-radius:8px;
+    border:2px solid #444;
+}
+
+.controls{
+    margin-top:20px;
+}
+
+button{
+    padding:12px 30px;
+    font-size:20px;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    background:gold;
+    font-weight:bold;
+}
+
+button:hover:not(:disabled){
+    background:#ffd700;
+}
+
+button:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+}
+
+.info{
+    margin-top:15px;
+    font-size:22px;
+}
+
+.win{
+    animation:flash .5s infinite alternate;
+}
+
+@keyframes flash{
+    from{background:#333;}
+    to{background:gold;color:black;}
+}
+</style>
+</head>
+<body>
+
+<h1>🎰 6×6 Slot Machine 🎰</h1>
+
+<div id="slot-machine">
+    <div id="grid" class="grid"></div>
+
+    <div class="controls">
+        <button id="spinBtn">SPIN</button>
+    </div>
+
+    <div class="info">
+        Balance: $<span id="balance">1000</span>
+    </div>
+
+    <div class="info">
+        <span id="message">Good Luck!</span>
+    </div>
+</div>
+
+<script>
+const symbols = ["🍒","🍋","🍊","🍇","⭐","💎","7️⃣"];
+const rows = 6;
+const cols = 6;
+
+let balance = 1000;
+const bet = 10;
+
+const grid = document.getElementById("grid");
+const balanceEl = document.getElementById("balance");
+const messageEl = document.getElementById("message");
+const spinBtn = document.getElementById("spinBtn");
+
+function createGrid(){
+    grid.innerHTML = "";
+    for(let i=0;i<rows*cols;i++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.textContent = "❔";
+        grid.appendChild(cell);
+    }
+}
+
+function randomSymbol(){
+    return symbols[Math.floor(Math.random()*symbols.length)];
+}
+
+function spin(){
+    if(balance < bet){
+        messageEl.textContent = "Not enough balance!";
+        return;
+    }
+
+    balance -= bet;
+    balanceEl.textContent = balance;
+    spinBtn.disabled = true;
+
+    const cells = document.querySelectorAll(".cell");
+
+    let animationCount = 0;
+
+    const interval = setInterval(() => {
+        cells.forEach(cell=>{
+            cell.classList.remove("win");
+            cell.textContent = randomSymbol();
+        });
+
+        animationCount++;
+
+        if(animationCount >= 20){
+            clearInterval(interval);
+            evaluate();
+            spinBtn.disabled = false;
+        }
+    },100);
+}
+
+function awardRowStreak(r, startCol, length, cells, winnings){
+    winnings.value += length * 5;
+    for(let x=startCol;x<startCol+length;x++){
+        cells[r*cols+x].classList.add("win");
+    }
+}
+
+function evaluate(){
+    const cells = document.querySelectorAll(".cell");
+
+    let matrix = [];
+    let index = 0;
+
+    for(let r=0;r<rows;r++){
+        matrix[r] = [];
+        for(let c=0;c<cols;c++){
+            matrix[r][c] = cells[index].textContent;
+            index++;
+        }
+    }
+
+    const winnings = { value: 0 };
+
+    for(let r=0;r<rows;r++){
+        let streak = 1;
+
+        for(let c=1;c<cols;c++){
+            if(matrix[r][c] === matrix[r][c-1]){
+                streak++;
+            }else{
+                if(streak >= 3){
+                    awardRowStreak(r, c - streak, streak, cells, winnings);
+                }
+                streak = 1;
+            }
+        }
+
+        if(streak >= 3){
+            awardRowStreak(r, cols - streak, streak, cells, winnings);
+        }
+    }
+
+    if(winnings.value > 0){
+        balance += winnings.value;
+        messageEl.textContent =
+            `🎉 You won $${winnings.value}!`;
+    }else{
+        messageEl.textContent =
+            "No win. Try again!";
+    }
+
+    balanceEl.textContent = balance;
+}
+
+spinBtn.addEventListener("click", spin);
+
+createGrid();
+</script>
+
+</body>
+</html>
