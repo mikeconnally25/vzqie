@@ -10,6 +10,27 @@ export {
 } from "./constants.js";
 export { dedupeParticipants, drawWinners } from "./drawWinners.js";
 export type { DrawWinnersOptions } from "./drawWinners.js";
+export {
+  BlackjackGame,
+  cardValue,
+  compareHands,
+  createDeck,
+  formatCard,
+  formatHand,
+  handValue,
+  isBlackjack,
+  isBusted,
+} from "./blackjack.js";
+export type { Card, HandOutcome, Rank, Suit } from "./blackjack.js";
+export { BlackjackGiveawayBot } from "./blackjackGiveaway.js";
+export type {
+  BlackjackGiveawayOptions,
+  BlackjackPhase,
+  BlackjackRoundState,
+  BotReply,
+  VoteChoice,
+  VoteSnapshot,
+} from "./blackjackGiveaway.js";
 export { GiveawayEngine } from "./giveawayEngine.js";
 export type {
   EntryResult,

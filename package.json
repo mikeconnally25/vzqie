@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "demo:blackjack": "tsx src/demo/blackjackDemo.ts",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "devDependencies": {
